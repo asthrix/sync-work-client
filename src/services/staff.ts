@@ -1,0 +1,74 @@
+import api from '@/lib/api/client';
+import { ApiResponse, PaginatedResponse, Employee, Department, Attendance, LeaveRequest } from '@/types';
+
+export const staffService = {
+  getEmployees: async (params?: { page?: number; limit?: number; department_id?: string }) => {
+    const response = await api.get<PaginatedResponse<Employee>>('/staff', { params });
+    return response.data;
+  },
+
+  getEmployee: async (id: string) => {
+    const response = await api.get<ApiResponse<Employee>>(`/staff/${id}`);
+    return response.data;
+  },
+
+  createEmployee: async (data: Partial<Employee>) => {
+    const response = await api.post<ApiResponse<Employee>>('/staff', data);
+    return response.data;
+  },
+
+  updateEmployee: async (id: string, data: Partial<Employee>) => {
+    const response = await api.put<ApiResponse<Employee>>(`/staff/${id}`, data);
+    return response.data;
+  },
+
+  deleteEmployee: async (id: string) => {
+    const response = await api.delete<ApiResponse<void>>(`/staff/${id}`);
+    return response.data;
+  },
+
+  getDepartments: async () => {
+    const response = await api.get<ApiResponse<Department[]>>('/departments');
+    return response.data;
+  },
+
+  createDepartment: async (data: Partial<Department>) => {
+    const response = await api.post<ApiResponse<Department>>('/departments', data);
+    return response.data;
+  },
+
+  checkIn: async (data: { employee_id: string; notes?: string }) => {
+    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-in', data);
+    return response.data;
+  },
+
+  checkOut: async (data: { employee_id: string; notes?: string }) => {
+    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-out', data);
+    return response.data;
+  },
+
+  getAttendance: async (params?: { employee_id?: string; start_date?: string; end_date?: string }) => {
+    const response = await api.get<ApiResponse<Attendance[]>>('/attendance', { params });
+    return response.data;
+  },
+
+  getLeaves: async () => {
+    const response = await api.get<ApiResponse<LeaveRequest[]>>('/leaves');
+    return response.data;
+  },
+
+  createLeave: async (data: Partial<LeaveRequest>) => {
+    const response = await api.post<ApiResponse<LeaveRequest>>('/leaves', data);
+    return response.data;
+  },
+
+  approveLeave: async (id: string) => {
+    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/approve`);
+    return response.data;
+  },
+
+  rejectLeave: async (id: string, reason: string) => {
+    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/reject`, { reason });
+    return response.data;
+  },
+};
