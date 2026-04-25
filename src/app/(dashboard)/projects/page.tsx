@@ -24,6 +24,10 @@ import { Permissions } from '@/lib/rbac/permissions';
 import { useProjects, useCreateProject } from '@/hooks/use-projects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { projectSchema, ProjectFormData } from '@/lib/validations/forms';
+import { Label } from '@/components/ui/label';
 
 const projects = [
   { id: 1, name: 'Website Redesign', description: 'Complete overhaul of company website with modern design', status: 'active', priority: 'high', progress: 75, members: 5, dueDate: '2025-03-15' },
@@ -57,16 +61,23 @@ export default function ProjectsPage() {
   
   const projects = projectsData?.data || [];
 
-  const handleCreateProject = async (formData: FormData) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProjectFormData>({
+    resolver: zodResolver(projectSchema),
+  });
+
+  const onSubmit = async (data: ProjectFormData) => {
     try {
       await createProject.mutateAsync({
-        name: formData.get('name') as string,
-        description: formData.get('description') as string,
-        priority: formData.get('priority') as 'low' | 'medium' | 'high' | 'critical',
-        due_date: formData.get('due_date') as string,
+        ...data,
         status: 'planning',
       } as any);
       toast.success('Project created successfully');
+      reset();
       setIsDialogOpen(false);
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to create project');
@@ -116,28 +127,37 @@ export default function ProjectsPage() {
                 <DialogTitle>Create New Project</DialogTitle>
                 <DialogDescription>Set up a new project for your team.</DialogDescription>
               </DialogHeader>
-              <form action={handleCreateProject} className="grid gap-4 py-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Project Name</label>
-                  <Input name="name" placeholder="Enter project name" required />
+                  <Label htmlFor="name">Project Name</Label>
+                  <Input id="name" {...register('name')} placeholder="Enter project name" />
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <textarea name="description" className="w-full rounded-md border border-input bg-background px-3 py-2" rows={3} placeholder="Project description" />
+                  <Label htmlFor="description">Description</Label>
+                  <textarea id="description" {...register('description')} className="w-full rounded-md border border-input bg-background px-3 py-2" rows={3} placeholder="Project description" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Priority</label>
-                    <select name="priority" className="w-full rounded-md border border-input bg-background px-3 py-2" required>
+                    <Label htmlFor="priority">Priority</Label>
+                    <select id="priority" {...register('priority')} className="w-full rounded-md border border-input bg-background px-3 py-2">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
                       <option value="critical">Critical</option>
                     </select>
+                    {errors.priority && (
+                      <p className="text-sm text-destructive">{errors.priority.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Due Date</label>
-                    <input name="due_date" type="date" className="w-full rounded-md border border-input bg-background px-3 py-2" required />
+                    <Label htmlFor="due_date">Due Date</Label>
+                    <input id="due_date" type="date" {...register('due_date')} className="w-full rounded-md border border-input bg-background px-3 py-2" />
+                    {errors.due_date && (
+                      <p className="text-sm text-destructive">{errors.due_date.message}</p>
+                    )}
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>

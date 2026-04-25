@@ -89,6 +89,12 @@ export interface Employee {
   city?: string;
   country?: string;
   created_at: string;
+  // Expanded fields from user
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  email?: string;
+  department?: Department;
 }
 
 export interface Department {
@@ -183,6 +189,8 @@ export interface Client {
   id: string;
   name: string;
   industry?: string;
+  email?: string;
+  phone?: string;
   website?: string;
   address?: string;
   tax_id?: string;
@@ -296,10 +304,17 @@ export interface Poll {
   title: string;
   description?: string;
   type: 'single_choice' | 'multiple_choice' | 'rating';
+  options?: PollOption[];
   end_date?: string;
   created_by: string;
   status: 'draft' | 'published' | 'closed';
   created_at: string;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes?: number;
 }
 
 export interface Recognition {
@@ -340,5 +355,6 @@ export interface PipelineStage {
   name: string;
   color?: string;
   position: number;
+  tasks?: Task[];
   created_at: string;
 }

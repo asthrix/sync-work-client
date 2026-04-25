@@ -30,6 +30,10 @@ import { PermissionGate } from '@/components/rbac/permission-gate';
 import { Permissions } from '@/lib/rbac/permissions';
 import { useEmployees, useDepartments, useCreateEmployee } from '@/hooks/use-staff';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { employeeSchema, EmployeeFormData } from '@/lib/validations/forms';
+import { Label } from '@/components/ui/label';
 
 function EmployeeSkeleton() {
   return (
@@ -67,16 +71,20 @@ export default function StaffPage() {
   const employees = employeesData?.data || [];
   const departments = departmentsData?.data || [];
 
-  const handleCreateEmployee = async (formData: FormData) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EmployeeFormData>({
+    resolver: zodResolver(employeeSchema),
+  });
+
+  const onSubmit = async (data: EmployeeFormData) => {
     try {
-      await createEmployee.mutateAsync({
-        first_name: formData.get('first_name') as string,
-        last_name: formData.get('last_name') as string,
-        email: formData.get('email') as string,
-        department_id: formData.get('department_id') as string,
-        job_title: formData.get('job_title') as string,
-      } as any);
+      await createEmployee.mutateAsync(data as any);
       toast.success('Employee created successfully');
+      reset();
       setIsDialogOpen(false);
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Failed to create employee');
@@ -123,34 +131,49 @@ export default function StaffPage() {
                 Fill in the employee details below.
               </DialogDescription>
             </DialogHeader>
-            <form action={handleCreateEmployee} className="grid gap-4 py-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">First Name</label>
-                  <Input name="first_name" placeholder="John" required />
+                  <Label htmlFor="first_name">First Name</Label>
+                  <Input id="first_name" {...register('first_name')} placeholder="John" />
+                  {errors.first_name && (
+                    <p className="text-sm text-destructive">{errors.first_name.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Last Name</label>
-                  <Input name="last_name" placeholder="Doe" required />
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input id="last_name" {...register('last_name')} placeholder="Doe" />
+                  {errors.last_name && (
+                    <p className="text-sm text-destructive">{errors.last_name.message}</p>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
-                <Input name="email" type="email" placeholder="john@company.com" required />
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" {...register('email')} placeholder="john@company.com" />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Department</label>
-                  <select name="department_id" className="w-full rounded-md border border-input bg-background px-3 py-2" required>
+                  <Label htmlFor="department_id">Department</Label>
+                  <select id="department_id" {...register('department_id')} className="w-full rounded-md border border-input bg-background px-3 py-2">
                     <option value="">Select department...</option>
                     {departments.map((dept: any) => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
                   </select>
+                  {errors.department_id && (
+                    <p className="text-sm text-destructive">{errors.department_id.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Job Title</label>
-                  <Input name="job_title" placeholder="Developer" required />
+                  <Label htmlFor="job_title">Job Title</Label>
+                  <Input id="job_title" {...register('job_title')} placeholder="Developer" />
+                  {errors.job_title && (
+                    <p className="text-sm text-destructive">{errors.job_title.message}</p>
+                  )}
                 </div>
               </div>
               <Button 

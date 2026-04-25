@@ -4,7 +4,7 @@ import { ApiResponse, Pipeline, PipelineStage, Task, PaginatedResponse } from '@
 export const pipelineService = {
   // Pipelines
   getPipelines: async (params?: { page?: number; limit?: number }) => {
-    const response = await api.get<PaginatedResponse<Pipeline[]>>('/pipelines', { params });
+    const response = await api.get<PaginatedResponse<Pipeline>>('/pipelines', { params });
     return response.data;
   },
 

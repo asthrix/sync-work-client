@@ -12,7 +12,7 @@ export const auditService = {
     action?: string;
     resource?: string;
   }) => {
-    const response = await api.get<PaginatedResponse<AuditLog[]>>('/audit-logs', { params });
+    const response = await api.get<PaginatedResponse<AuditLog>>('/audit-logs', { params });
     return response.data;
   },
 
@@ -22,7 +22,7 @@ export const auditService = {
   },
 
   searchAuditLogs: async (params: { query: string; page?: number; limit?: number }) => {
-    const response = await api.get<PaginatedResponse<AuditLog[]>>('/audit-logs/search', { params });
+    const response = await api.get<PaginatedResponse<AuditLog>>('/audit-logs/search', { params });
     return response.data;
   },
 
