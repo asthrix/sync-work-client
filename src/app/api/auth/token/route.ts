@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const accessToken = request.cookies.get('accessToken')?.value;
+  // Support both cookie-based and header-based auth
+  const accessToken = request.cookies.get('accessToken')?.value ||
+    request.headers.get('authorization')?.replace('Bearer ', '');
 
   if (!accessToken) {
     return NextResponse.json(

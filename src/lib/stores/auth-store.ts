@@ -6,10 +6,13 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
   
   setUser: (user: User | null) => void;
   setAuthenticated: (value: boolean) => void;
   setLoading: (loading: boolean) => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -20,12 +23,21 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
+      accessToken: null,
+      refreshToken: null,
       
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setAuthenticated: (value) => set({ isAuthenticated: value }),
       setLoading: (loading) => set({ isLoading: loading }),
+      setTokens: (accessToken, refreshToken) => {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        set({ accessToken, refreshToken });
+      },
       logout: () => {
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        set({ user: null, isAuthenticated: false, isLoading: false, accessToken: null, refreshToken: null });
       },
       hasPermission: (permission) => {
         const { user } = get();

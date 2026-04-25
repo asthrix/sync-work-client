@@ -128,14 +128,12 @@ export function TopBar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold"
-              >
-                {user?.full_name?.charAt(0) || 'U'}
-              </motion.div>
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold cursor-pointer"
+            >
+              {user?.full_name?.charAt(0) || 'U'}
+            </motion.div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
             <DropdownMenuLabel className="font-normal">

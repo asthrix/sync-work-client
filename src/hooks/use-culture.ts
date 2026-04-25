@@ -3,10 +3,54 @@ import { cultureService } from '@/services/culture';
 
 export const cultureKeys = {
   events: ['culture', 'events'] as const,
+  trips: ['culture', 'trips'] as const,
   polls: ['culture', 'polls'] as const,
   recognitions: ['culture', 'recognitions'] as const,
   leaderboard: ['culture', 'leaderboard'] as const,
 };
+
+export function useTrips() {
+  return useQuery({
+    queryKey: cultureKeys.trips,
+    queryFn: cultureService.getTrips,
+  });
+}
+
+export function useTrip(id: string) {
+  return useQuery({
+    queryKey: ['culture', 'trip', id],
+    queryFn: () => cultureService.getTrip(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreateTrip() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cultureService.createTrip,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cultureKeys.trips });
+    },
+  });
+}
+
+export function useRegisterForTrip() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cultureService.registerForTrip,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cultureKeys.trips });
+    },
+  });
+}
+
+export function useTripItinerary(id: string) {
+  return useQuery({
+    queryKey: ['culture', 'trip', id, 'itinerary'],
+    queryFn: () => cultureService.getTripItinerary(id),
+    enabled: !!id,
+  });
+}
 
 export function useEvents() {
   return useQuery({

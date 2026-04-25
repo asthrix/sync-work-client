@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
-  const refreshToken = request.cookies.get('refreshToken')?.value;
+  // Support both cookie-based and body-based refresh tokens
+  let refreshToken = request.cookies.get('refreshToken')?.value;
+  
+  if (!refreshToken) {
+    try {
+      const body = await request.json() as { refresh_token?: string };
+      refreshToken = body.refresh_token;
+    } catch (e) {
+      // No body provided
+    }
+  }
 
   if (!refreshToken) {
     return NextResponse.json(
@@ -21,30 +31,19 @@ export async function POST(request: NextRequest) {
 
     if (!data.success) {
       return NextResponse.json(
-        { success: false },
-        {
-          status: 401,
-          headers: {
-            'Set-Cookie': [
-              'refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0',
-              'accessToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0',
-            ].join(', '),
-          },
-        }
+        { success: false, error: data.error },
+        { status: 401 }
       );
     }
 
-    const refreshTokenCookie = `refreshToken=${data.data.refresh_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
-    const accessTokenCookie = `accessToken=${data.data.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${15 * 60}`;
-
-    return NextResponse.json(
-      { success: true },
-      {
-        headers: {
-          'Set-Cookie': [refreshTokenCookie, accessTokenCookie].join(', '),
-        },
-      }
-    );
+    // Return new tokens in response body for client-side storage
+    return NextResponse.json({
+      success: true,
+      data: {
+        access_token: data.data.access_token,
+        refresh_token: data.data.refresh_token,
+      },
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Token refresh failed' },

@@ -8,10 +8,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { WebSocketProvider } from "@/components/providers/websocket-provider";
 import { Toaster } from "sonner";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+const manrope = Manrope({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "SyncWork - Office Management System",
@@ -24,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={manrope.variable}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", manrope.variable)}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>

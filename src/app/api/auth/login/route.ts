@@ -16,17 +16,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data, { status: 401 });
     }
 
-    const refreshTokenCookie = `refreshToken=${data.data.refresh_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
-    const accessTokenCookie = `accessToken=${data.data.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${15 * 60}`;
-
-    return NextResponse.json(
-      { success: true, data: { user: data.data.user } },
-      {
-        headers: {
-          'Set-Cookie': [refreshTokenCookie, accessTokenCookie].join(', '),
-        },
-      }
-    );
+    // Return tokens in response body for client-side storage (localStorage)
+    // Note: Backend login doesn't return user, user is fetched separately via /auth/me
+    return NextResponse.json({
+      success: true,
+      data: {
+        access_token: data.data.access_token,
+        refresh_token: data.data.refresh_token,
+      },
+    });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Authentication failed' },

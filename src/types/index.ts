@@ -327,6 +327,120 @@ export interface Recognition {
   created_at: string;
 }
 
+export interface Trip {
+  id: string;
+  title: string;
+  description?: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  organizer_id: string;
+  max_participants?: number;
+  cost_per_person?: number;
+  status: 'planning' | 'open' | 'closed' | 'completed' | 'cancelled';
+  banner_url?: string;
+  created_at: string;
+}
+
+export interface Contract {
+  id: string;
+  client_id: string;
+  title: string;
+  description?: string;
+  start_date: string;
+  end_date?: string;
+  value?: number;
+  currency: string;
+  status: 'draft' | 'active' | 'expired' | 'terminated' | 'renewed';
+  renewal_notice_days?: number;
+  created_at: string;
+}
+
+export interface Ticket {
+  id: string;
+  title: string;
+  description?: string;
+  client_id?: string;
+  project_id?: string;
+  assignee_id?: string;
+  reporter_id: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed' | 'reopened';
+  category: string;
+  due_date?: string;
+  resolved_at?: string;
+  created_at: string;
+}
+
+export interface TicketComment {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  user_name?: string;
+  content: string;
+  created_at: string;
+}
+
+export interface SalaryStructure {
+  id: string;
+  name: string;
+  description?: string;
+  base_salary: number;
+  currency: string;
+  allowances?: Record<string, number>;
+  deductions?: Record<string, number>;
+  effective_date: string;
+  department_id?: string;
+  grade?: string;
+  created_at: string;
+}
+
+export interface PerformanceReview {
+  id: string;
+  employee_id: string;
+  reviewer_id: string;
+  period: string;
+  rating?: number;
+  goals?: string[];
+  achievements?: string[];
+  feedback?: string;
+  status: 'draft' | 'submitted' | 'reviewed' | 'acknowledged';
+  submitted_at?: string;
+  reviewed_at?: string;
+  created_at: string;
+}
+
+export interface Contact {
+  id: string;
+  client_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface Payroll {
+  id: string;
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'processed' | 'published';
+  total_amount?: number;
+  processed_at?: string;
+  published_at?: string;
+  created_at: string;
+}
+
+export interface LeaveType {
+  id: string;
+  name: string;
+  code: string;
+  days_allowed: number;
+  is_paid: boolean;
+  description?: string;
+}
+
 export interface AuditLog {
   id: string;
   user_id: string;

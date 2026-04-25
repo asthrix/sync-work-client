@@ -19,17 +19,29 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  FileText,
+  Ticket,
+  Clock,
+  Plane,
+  TrendingUp,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Staff & HR', href: '/staff', icon: Users },
+  { name: 'Attendance', href: '/staff/attendance', icon: Clock },
+  { name: 'Leave', href: '/staff/leaves', icon: Calendar },
+  { name: 'Performance', href: '/staff/performance', icon: TrendingUp },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Pipeline', href: '/pipeline', icon: BarChart3 },
   { name: 'Clients', href: '/clients', icon: Building2 },
+  { name: 'Contracts', href: '/contracts', icon: FileText },
+  { name: 'Tickets', href: '/tickets', icon: Ticket },
   { name: 'Finance', href: '/finance/payroll', icon: DollarSign },
+  { name: 'Salary', href: '/finance/salary-structures', icon: DollarSign },
   { name: 'Communication', href: '/communication/chat', icon: MessageSquare },
   { name: 'Culture', href: '/culture/events', icon: Calendar },
+  { name: 'Trips', href: '/culture/trips', icon: Plane },
   { name: 'Audit', href: '/audit', icon: Shield, adminOnly: true },
 ];
 

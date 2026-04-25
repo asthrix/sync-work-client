@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const { data: eventsData, isLoading: eventsLoading } = useEvents();
   const { data: announcementsData } = useAnnouncements();
 
-  const projects = projectsData?.data || [];
+  const projects = Array.isArray(projectsData?.data) ? projectsData.data : [];
   const employeesCount = employeesData?.pagination?.total || 0;
   const clientsCount = clientsData?.pagination?.total || 0;
   const eventsCount = eventsData?.data?.length || 0;

@@ -1,5 +1,5 @@
 import api from '@/lib/api/client';
-import { ApiResponse, Event, Poll, Recognition } from '@/types';
+import { ApiResponse, Event, Poll, Recognition, Trip } from '@/types';
 
 export const cultureService = {
   getEvents: async () => {
@@ -14,6 +14,31 @@ export const cultureService = {
 
   registerForEvent: async (eventId: string) => {
     const response = await api.post<ApiResponse<void>>(`/culture/events/${eventId}/register`);
+    return response.data;
+  },
+
+  getTrips: async () => {
+    const response = await api.get<ApiResponse<Trip[]>>('/culture/trips');
+    return response.data;
+  },
+
+  getTrip: async (id: string) => {
+    const response = await api.get<ApiResponse<Trip>>(`/culture/trips/${id}`);
+    return response.data;
+  },
+
+  createTrip: async (data: Partial<Trip>) => {
+    const response = await api.post<ApiResponse<Trip>>('/culture/trips', data);
+    return response.data;
+  },
+
+  registerForTrip: async (tripId: string) => {
+    const response = await api.post<ApiResponse<void>>(`/culture/trips/${tripId}/register`);
+    return response.data;
+  },
+
+  getTripItinerary: async (id: string) => {
+    const response = await api.get<ApiResponse<any[]>>(`/culture/trips/${id}/itinerary`);
     return response.data;
   },
 

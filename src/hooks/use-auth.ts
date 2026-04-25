@@ -10,14 +10,18 @@ export const authKeys = {
 export function useLogin() {
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);
+  const setTokens = useAuthStore((state) => state.setTokens);
 
   return useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      if (data.data?.user) {
-        setUser(data.data.user);
-        queryClient.invalidateQueries({ queryKey: authKeys.all });
+      if (data.data?.access_token && data.data?.refresh_token) {
+        setTokens(data.data.access_token, data.data.refresh_token);
+        // Invalidate me query so auth provider fetches user data
+        queryClient.invalidateQueries({ queryKey: ['me'] });
+        queryClient.removeQueries({ queryKey: ['me'] });
       }
+      queryClient.invalidateQueries({ queryKey: authKeys.all });
     },
   });
 }
@@ -37,7 +41,10 @@ export function useLogout() {
     onSuccess: () => {
       logout();
       queryClient.clear();
-      window.location.href = '/login';
+    },
+    onError: () => {
+      logout();
+      queryClient.clear();
     },
   });
 }
