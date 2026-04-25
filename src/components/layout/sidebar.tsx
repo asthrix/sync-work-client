@@ -6,8 +6,6 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { usePermissions } from '@/hooks/use-permissions';
-import { Permissions } from '@/lib/rbac/permissions';
 import {
   LayoutDashboard,
   Users,
@@ -18,19 +16,21 @@ import {
   Shield,
   Settings,
   DollarSign,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Staff & HR', href: '/staff', icon: Users, permission: Permissions.STAFF_VIEW },
-  { name: 'Projects', href: '/projects', icon: FolderKanban, permission: Permissions.PROJECT_VIEW },
-  { name: 'Clients', href: '/clients', icon: Building2, permission: Permissions.CLIENT_VIEW },
-  { name: 'Finance', href: '/finance/payroll', icon: DollarSign, permission: Permissions.FINANCE_VIEW },
-  { name: 'Communication', href: '/communication/chat', icon: MessageSquare, permission: Permissions.CHAT_VIEW },
-  { name: 'Culture', href: '/culture/events', icon: Calendar, permission: Permissions.EVENT_VIEW },
-  { name: 'Audit', href: '/audit', icon: Shield, permission: Permissions.AUDIT_VIEW },
+  { name: 'Staff & HR', href: '/staff', icon: Users },
+  { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Pipeline', href: '/pipeline', icon: BarChart3 },
+  { name: 'Clients', href: '/clients', icon: Building2 },
+  { name: 'Finance', href: '/finance/payroll', icon: DollarSign },
+  { name: 'Communication', href: '/communication/chat', icon: MessageSquare },
+  { name: 'Culture', href: '/culture/events', icon: Calendar },
+  { name: 'Audit', href: '/audit', icon: Shield, adminOnly: true },
 ];
 
 const bottomNavigation = [
@@ -41,10 +41,11 @@ export function Sidebar() {
   const pathname = usePathname();
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapse = useUIStore((state) => state.toggleSidebarCollapse);
-  const { hasPermission } = usePermissions();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin');
 
   const visibleNav = navigation.filter((item) => {
-    if (item.permission) return hasPermission(item.permission);
+    if (item.adminOnly) return isAdmin;
     return true;
   });
 
