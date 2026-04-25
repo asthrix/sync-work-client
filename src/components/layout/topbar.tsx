@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/lib/stores/ui-store';
@@ -12,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -147,27 +147,29 @@ export function TopBar() {
             </motion.div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.full_name || 'User'}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email || ''}</p>
-              </div>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.full_name || 'User'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email || ''}</p>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link href="/settings/profile" className="flex items-center">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => window.location.href = '/settings/profile'}>
                 <User className="mr-2 h-4 w-4" /> Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href="/settings/profile" className="flex items-center">
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/settings/profile'}>
                 <Settings className="mr-2 h-4 w-4" /> Settings
-              </Link>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Log out
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

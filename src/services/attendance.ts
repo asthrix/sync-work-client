@@ -13,13 +13,13 @@ export const attendanceService = {
     return response.data;
   },
 
-  checkIn: async () => {
-    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-in');
+  checkIn: async (data?: { employee_id?: string; notes?: string }) => {
+    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-in', data);
     return response.data;
   },
 
-  checkOut: async () => {
-    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-out');
+  checkOut: async (data?: { employee_id?: string; notes?: string }) => {
+    const response = await api.post<ApiResponse<Attendance>>('/attendance/check-out', data);
     return response.data;
   },
 

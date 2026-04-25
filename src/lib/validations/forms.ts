@@ -1,11 +1,18 @@
 import { z } from 'zod';
 
+// Backend requires: user_id, employee_code, employment_type, hire_date, job_title
 export const employeeSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  department_id: z.string().min(1, 'Department is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  employee_code: z.string().min(1, 'Employee code is required'),
+  employment_type: z.enum(['full_time', 'part_time', 'contract', 'intern', 'freelance']),
+  hire_date: z.string().min(1, 'Hire date is required'),
   job_title: z.string().min(1, 'Job title is required'),
+  department_id: z.string().optional(),
+  salary: z.number().optional(),
+  currency: z.string().optional(),
 });
 
 export type EmployeeFormData = z.infer<typeof employeeSchema>;

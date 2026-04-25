@@ -9,11 +9,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, LogIn, LogOut, CalendarDays } from 'lucide-react';
 import { useAttendance, useMyAttendance, useCheckIn, useCheckOut } from '@/hooks/use-attendance';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function AttendancePage() {
   const [activeTab, setActiveTab] = useState('today');
+  const user = useAuthStore((state) => state.user);
   const { data: attendanceData, isLoading } = useAttendance();
   const { data: myAttendanceData } = useMyAttendance();
   const checkIn = useCheckIn();
@@ -23,16 +25,30 @@ export default function AttendancePage() {
   const myAttendance = myAttendanceData?.data || [];
 
   const handleCheckIn = () => {
-    checkIn.mutate(undefined, {
+    if (!user?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    checkIn.mutate({ employee_id: user.id }, {
       onSuccess: () => toast.success('Checked in successfully'),
-      onError: () => toast.error('Failed to check in'),
+      onError: (error: any) => {
+        const message = error?.response?.data?.error?.message || error?.message || 'Failed to check in';
+        toast.error(message);
+      },
     });
   };
 
   const handleCheckOut = () => {
-    checkOut.mutate(undefined, {
+    if (!user?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    checkOut.mutate({ employee_id: user.id }, {
       onSuccess: () => toast.success('Checked out successfully'),
-      onError: () => toast.error('Failed to check out'),
+      onError: (error: any) => {
+        const message = error?.response?.data?.error?.message || error?.message || 'Failed to check out';
+        toast.error(message);
+      },
     });
   };
 

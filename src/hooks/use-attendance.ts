@@ -24,7 +24,7 @@ export function useMyAttendance() {
 export function useCheckIn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: attendanceService.checkIn,
+    mutationFn: (data?: { employee_id?: string; notes?: string }) => attendanceService.checkIn(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
       queryClient.invalidateQueries({ queryKey: attendanceKeys.my });
@@ -35,7 +35,7 @@ export function useCheckIn() {
 export function useCheckOut() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: attendanceService.checkOut,
+    mutationFn: (data?: { employee_id?: string; notes?: string }) => attendanceService.checkOut(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
       queryClient.invalidateQueries({ queryKey: attendanceKeys.my });

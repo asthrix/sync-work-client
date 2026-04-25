@@ -134,14 +134,14 @@ export default function StaffPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="first_name">First Name</Label>
+                  <Label htmlFor="first_name">First Name *</Label>
                   <Input id="first_name" {...register('first_name')} placeholder="John" />
                   {errors.first_name && (
                     <p className="text-sm text-destructive">{errors.first_name.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="last_name">Last Name</Label>
+                  <Label htmlFor="last_name">Last Name *</Label>
                   <Input id="last_name" {...register('last_name')} placeholder="Doe" />
                   {errors.last_name && (
                     <p className="text-sm text-destructive">{errors.last_name.message}</p>
@@ -149,11 +149,57 @@ export default function StaffPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input id="email" type="email" {...register('email')} placeholder="john@company.com" />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email.message}</p>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input id="password" type="password" {...register('password')} placeholder="Min 6 characters" />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="employee_code">Employee Code *</Label>
+                  <Input id="employee_code" {...register('employee_code')} placeholder="EMP001" />
+                  {errors.employee_code && (
+                    <p className="text-sm text-destructive">{errors.employee_code.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="employment_type">Employment Type *</Label>
+                  <select id="employment_type" {...register('employment_type')} className="w-full rounded-md border border-input bg-background px-3 py-2">
+                    <option value="">Select type...</option>
+                    <option value="full_time">Full Time</option>
+                    <option value="part_time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="intern">Intern</option>
+                    <option value="freelance">Freelance</option>
+                  </select>
+                  {errors.employment_type && (
+                    <p className="text-sm text-destructive">{errors.employment_type.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hire_date">Hire Date *</Label>
+                  <Input id="hire_date" type="date" {...register('hire_date')} />
+                  {errors.hire_date && (
+                    <p className="text-sm text-destructive">{errors.hire_date.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="job_title">Job Title *</Label>
+                  <Input id="job_title" {...register('job_title')} placeholder="Developer" />
+                  {errors.job_title && (
+                    <p className="text-sm text-destructive">{errors.job_title.message}</p>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -169,10 +215,10 @@ export default function StaffPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="job_title">Job Title</Label>
-                  <Input id="job_title" {...register('job_title')} placeholder="Developer" />
-                  {errors.job_title && (
-                    <p className="text-sm text-destructive">{errors.job_title.message}</p>
+                  <Label htmlFor="salary">Salary</Label>
+                  <Input id="salary" type="number" {...register('salary', { valueAsNumber: true })} placeholder="50000" />
+                  {errors.salary && (
+                    <p className="text-sm text-destructive">{errors.salary.message}</p>
                   )}
                 </div>
               </div>

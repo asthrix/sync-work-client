@@ -12,9 +12,46 @@ export const staffService = {
     return response.data;
   },
 
-  createEmployee: async (data: Partial<Employee>) => {
-    const response = await api.post<ApiResponse<Employee>>('/staff', data);
-    return response.data;
+  createEmployee: async (data: { 
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    employee_code: string;
+    employment_type: string;
+    hire_date: string;
+    job_title: string;
+    department_id?: string;
+    salary?: number;
+    currency?: string;
+  }) => {
+    // Step 1: Create user first
+    const userResponse = await api.post<ApiResponse<{ id: string }>>('/auth/register', {
+      email: data.email,
+      password: data.password,
+      first_name: data.first_name,
+      last_name: data.last_name,
+    });
+    
+    if (!userResponse.data?.data?.id) {
+      throw new Error('Failed to create user');
+    }
+    
+    const userId = userResponse.data.data.id;
+    
+    // Step 2: Create employee record
+    const employeeResponse = await api.post<ApiResponse<Employee>>('/staff', {
+      user_id: userId,
+      employee_code: data.employee_code,
+      employment_type: data.employment_type,
+      hire_date: data.hire_date,
+      job_title: data.job_title,
+      department_id: data.department_id,
+      salary: data.salary,
+      currency: data.currency || 'USD',
+    });
+    
+    return employeeResponse.data;
   },
 
   updateEmployee: async (id: string, data: Partial<Employee>) => {
