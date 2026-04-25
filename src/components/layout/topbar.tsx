@@ -41,7 +41,18 @@ export function TopBar() {
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    try {
+      const token = localStorage.getItem('access_token');
+      await fetch('/api/backend/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      // Ignore logout errors
+    }
     logout();
     window.location.href = '/login';
   };

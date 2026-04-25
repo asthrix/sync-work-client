@@ -17,6 +17,6 @@ export const uploadService = {
   },
 
   getFileUrl: (folder: string, filename: string) => {
-    return `/api/proxy/files/${folder}/${filename}`;
+    return `/api/backend/files/${folder}/${filename}`;
   },
 };

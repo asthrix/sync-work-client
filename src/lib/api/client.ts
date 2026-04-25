@@ -1,11 +1,10 @@
 import axios from 'axios';
 
-// Use Next.js proxy to avoid CORS - browser calls localhost:3000/api/proxy/*
-// which forwards to backend at localhost:8080/api/v1/*
-const PROXY_BASE_URL = '/api/proxy';
-
+// Use Next.js rewrites to proxy requests through same origin
+// This avoids CORS issues in the browser
+// Rewrite: /api/backend/* -> http://localhost:8080/api/v1/*
 export const api = axios.create({
-  baseURL: PROXY_BASE_URL,
+  baseURL: '/api/backend',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

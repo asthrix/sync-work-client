@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useRouter, usePathname } from 'next/navigation';
+import { authService } from '@/services/auth';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
@@ -21,16 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('No token');
 
-      // Use Next.js proxy to avoid CORS
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Auth check failed');
-
-      return (await response.json()) as { success: boolean; data?: any };
+      // Use direct backend connection via auth service
+      return await authService.getMe();
     },
     retry: false,
     refetchOnWindowFocus: true,

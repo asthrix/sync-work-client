@@ -40,7 +40,8 @@ export default function LoginPage() {
   const handleLogin = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      // Use Next.js rewrites (same origin, no CORS)
+      const response = await fetch('/api/backend/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -63,8 +64,9 @@ export default function LoginPage() {
       } else {
         toast.error(result.error?.message || 'Invalid credentials');
       }
-    } catch (error) {
-      toast.error('An error occurred. Please try again.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
