@@ -311,3 +311,34 @@ export interface Recognition {
   points: number;
   created_at: string;
 }
+
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  action: string;
+  resource: string;
+  resource_id?: string;
+  details?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  description?: string;
+  project_id?: string;
+  status: 'active' | 'archived';
+  created_at: string;
+}
+
+export interface PipelineStage {
+  id: string;
+  pipeline_id: string;
+  name: string;
+  color?: string;
+  position: number;
+  created_at: string;
+}

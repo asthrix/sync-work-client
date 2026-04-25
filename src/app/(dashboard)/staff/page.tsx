@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -23,35 +24,77 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Search, Plus, Mail, Phone, MoreHorizontal } from 'lucide-react';
+import { Search, Plus, Mail, Phone, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { staggerContainer, itemVariants } from '@/lib/animations/variants';
 import { PermissionGate } from '@/components/rbac/permission-gate';
 import { Permissions } from '@/lib/rbac/permissions';
+import { useEmployees, useDepartments, useCreateEmployee } from '@/hooks/use-staff';
+import { toast } from 'sonner';
 
-const employees = [
-  { id: 1, name: 'John Doe', email: 'john@company.com', code: 'EMP001', department: 'Engineering', role: 'Senior Developer', status: 'active' },
-  { id: 2, name: 'Jane Smith', email: 'jane@company.com', code: 'EMP002', department: 'Design', role: 'UI Designer', status: 'active' },
-  { id: 3, name: 'Mike Johnson', email: 'mike@company.com', code: 'EMP003', department: 'Marketing', role: 'Marketing Manager', status: 'on_leave' },
-  { id: 4, name: 'Sarah Williams', email: 'sarah@company.com', code: 'EMP004', department: 'Engineering', role: 'DevOps Engineer', status: 'active' },
-  { id: 5, name: 'Tom Brown', email: 'tom@company.com', code: 'EMP005', department: 'Sales', role: 'Sales Representative', status: 'probation' },
-];
-
-const departments = [
-  { name: 'Engineering', count: 45, color: 'bg-blue-500/10 text-blue-500' },
-  { name: 'Design', count: 12, color: 'bg-purple-500/10 text-purple-500' },
-  { name: 'Marketing', count: 18, color: 'bg-orange-500/10 text-orange-500' },
-  { name: 'Sales', count: 23, color: 'bg-green-500/10 text-green-500' },
-];
+function EmployeeSkeleton() {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+    </TableRow>
+  );
+}
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useEmployees({
+    search: searchQuery,
+    limit: 50,
+  });
+  
+  const { data: departmentsData, isLoading: departmentsLoading } = useDepartments();
+  const createEmployee = useCreateEmployee();
 
-  const filteredEmployees = employees.filter((emp) =>
-    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const employees = employeesData?.data || [];
+  const departments = departmentsData?.data || [];
+
+  const handleCreateEmployee = async (formData: FormData) => {
+    try {
+      await createEmployee.mutateAsync({
+        first_name: formData.get('first_name') as string,
+        last_name: formData.get('last_name') as string,
+        email: formData.get('email') as string,
+        department_id: formData.get('department_id') as string,
+        job_title: formData.get('job_title') as string,
+      } as any);
+      toast.success('Employee created successfully');
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to create employee');
+    }
+  };
+
+  if (employeesError) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-xl font-semibold">Failed to load employees</h2>
+          <p className="text-muted-foreground">{employeesError.message}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -80,33 +123,44 @@ export default function StaffPage() {
                 Fill in the employee details below.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <form action={handleCreateEmployee} className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">First Name</label>
-                  <Input placeholder="John" />
+                  <Input name="first_name" placeholder="John" required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Last Name</label>
-                  <Input placeholder="Doe" />
+                  <Input name="last_name" placeholder="Doe" required />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
-                <Input type="email" placeholder="john@company.com" />
+                <Input name="email" type="email" placeholder="john@company.com" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Department</label>
-                  <Input placeholder="Engineering" />
+                  <select name="department_id" className="w-full rounded-md border border-input bg-background px-3 py-2" required>
+                    <option value="">Select department...</option>
+                    {departments.map((dept: any) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Role</label>
-                  <Input placeholder="Developer" />
+                  <label className="text-sm font-medium">Job Title</label>
+                  <Input name="job_title" placeholder="Developer" required />
                 </div>
               </div>
-            </div>
-            <Button className="w-full" onClick={() => setIsDialogOpen(false)}>Add Employee</Button>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={createEmployee.isPending}
+              >
+                {createEmployee.isPending ? 'Creating...' : 'Add Employee'}
+              </Button>
+            </form>
           </DialogContent>
         </Dialog>
         </PermissionGate>
@@ -118,21 +172,35 @@ export default function StaffPage() {
         animate="visible"
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
       >
-        {departments.map((dept) => (
-          <motion.div key={dept.name} variants={itemVariants}>
-            <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{dept.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dept.count}</div>
-                  <p className="text-xs text-muted-foreground">employees</p>
-                </CardContent>
-              </Card>
+        {departmentsLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-12 mb-1" />
+                <Skeleton className="h-3 w-16" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          departments.map((dept: any) => (
+            <motion.div key={dept.id} variants={itemVariants}>
+              <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">{dept.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{dept.employee_count || 0}</div>
+                    <p className="text-xs text-muted-foreground">employees</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        ))}
+          ))
+        )}
       </motion.div>
 
       <Card>
@@ -163,51 +231,63 @@ export default function StaffPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.map((employee) => (
-                <motion.tr
-                  key={employee.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
-                  className="border-b transition-colors"
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {employee.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-sm text-muted-foreground">{employee.email}</p>
+              {employeesLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <EmployeeSkeleton key={i} />
+                ))
+              ) : employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No employees found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employees.map((employee: any) => (
+                  <motion.tr
+                    key={employee.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+                    className="border-b transition-colors"
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                            {employee.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{employee.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{employee.code}</TableCell>
-                  <TableCell>{employee.department}</TableCell>
-                  <TableCell>{employee.role}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={employee.status === 'active' ? 'default' : 'secondary'}
-                      className={
-                        employee.status === 'on_leave'
-                          ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
-                          : employee.status === 'probation'
-                          ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
-                          : ''
-                      }
-                    >
-                      {employee.status.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </motion.tr>
-              ))}
+                    </TableCell>
+                    <TableCell>{employee.employee_code}</TableCell>
+                    <TableCell>{employee.department?.name || 'N/A'}</TableCell>
+                    <TableCell>{employee.job_title}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={employee.status === 'active' ? 'default' : 'secondary'}
+                        className={
+                          employee.status === 'on_leave'
+                            ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
+                            : employee.status === 'probation'
+                            ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                            : ''
+                        }
+                      >
+                        {employee.status?.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </motion.tr>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
