@@ -1,38 +1,46 @@
 # SyncWork Frontend API Integration Guide
 
-## Table of Contents
-1. [Getting Started](#getting-started)
-2. [Base Configuration](#base-configuration)
-3. [Authentication](#authentication)
-4. [TypeScript Types](#typescript-types)
-5. [Tanstack Query Setup](#tanstack-query-setup)
-6. [API Integration by Domain](#api-integration-by-domain)
-7. [Error Handling](#error-handling)
-8. [Common Patterns](#common-patterns)
+## Complete API Reference (194 Endpoints)
+
+**Version:** 1.0.0
+**Base URL:** `http://localhost:8080/api/v1`
+**WebSocket:** `ws://localhost:8080/ws`
+**Swagger UI:** `http://localhost:8080/swagger/index.html`
 
 ---
 
-## Getting Started
+## Table of Contents
 
-### Prerequisites
-- Next.js 16+ with TypeScript
-- Axios for HTTP requests
-- Tanstack Query (React Query) for server state
-- Zustand for client state
-- shadcn/ui components
+1. [Quick Start](#quick-start)
+2. [Authentication](#authentication)
+3. [API Categories](#api-categories)
+   - [Authentication & Users](#1-authentication--users)
+   - [Staff & HR](#2-staff--hr)
+   - [Projects & Tasks](#3-projects--tasks)
+   - [Pipelines & Kanban](#4-pipelines--kanban)
+   - [Clients & CRM](#5-clients--crm)
+   - [Finance](#6-finance)
+   - [Communication](#7-communication)
+   - [Culture & Events](#8-culture--events)
+   - [Audit & Compliance](#9-audit--compliance)
+   - [File Upload](#10-file-upload)
+   - [WebSocket](#11-websocket)
+4. [TypeScript Types](#typescript-types)
+5. [Tanstack Query Patterns](#tanstack-query-patterns)
+6. [Error Handling](#error-handling)
+
+---
+
+## Quick Start
 
 ### Environment Variables
-Create `.env.local`:
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
 NEXT_PUBLIC_APP_NAME="SyncWork"
 ```
 
----
-
-## Base Configuration
-
-### Axios Instance Setup
+### Axios Configuration
 ```typescript
 // lib/axios.ts
 import axios, { AxiosError, AxiosResponse } from 'axios';
@@ -41,7 +49,9 @@ const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'X-Request-ID': crypto.randomUUID(),
   },
+  timeout: 30000,
 });
 
 // Request interceptor - Add auth token
@@ -76,7 +86,6 @@ api.interceptors.response.use(
         
         return api(originalRequest);
       } catch (refreshError) {
-        // Logout user
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         window.location.href = '/login';
@@ -134,7 +143,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 
 ## Authentication
 
-### Auth Store (Zustand)
+### Zustand Auth Store
 ```typescript
 // stores/auth-store.ts
 import { create } from 'zustand';
@@ -177,118 +186,534 @@ export const useAuthStore = create<AuthState>()(
 );
 ```
 
-### Auth Service
+---
+
+## API Categories
+
+### 1. Authentication & Users
+
+#### Authentication Endpoints (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/register` | No | Register new user |
+| POST | `/auth/login` | No | Login user |
+| GET | `/auth/me` | Yes | Get current user |
+| POST | `/auth/refresh` | No | Refresh access token |
+| POST | `/auth/logout` | Yes | Logout user |
+| POST | `/auth/password-reset` | No | Request password reset |
+| POST | `/auth/password-reset/confirm` | No | Confirm password reset |
+
 ```typescript
 // services/auth.ts
-import api from '@/lib/axios';
-import { ApiResponse } from '@/types/api';
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface RegisterRequest {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-}
-
-interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_at: string;
-}
-
 export const authService = {
-  login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post('/auth/login', data);
-    return response.data;
-  },
-
-  register: async (data: RegisterRequest): Promise<ApiResponse<User>> => {
-    const response = await api.post('/auth/register', data);
-    return response.data;
-  },
-
-  getMe: async (): Promise<ApiResponse<User>> => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
-
-  refreshToken: async (refreshToken: string): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
-    return response.data;
-  },
-
-  logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
-  },
+  login: (data: { email: string; password: string }) =>
+    api.post('/auth/login', data),
+  register: (data: { email: string; password: string; first_name: string; last_name: string; phone?: string }) =>
+    api.post('/auth/register', data),
+  getMe: () => api.get('/auth/me'),
+  refreshToken: (refresh_token: string) =>
+    api.post('/auth/refresh', { refresh_token }),
+  logout: () => api.post('/auth/logout'),
+  passwordReset: (email: string) =>
+    api.post('/auth/password-reset', { email }),
+  passwordResetConfirm: (data: { token: string; new_password: string }) =>
+    api.post('/auth/password-reset/confirm', data),
 };
 ```
 
-### Auth Query Hooks
+#### Users Endpoints (6)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/users` | Yes | List all users |
+| GET | `/users/:id` | Yes | Get user by ID |
+| PUT | `/users/:id` | Yes | Update user |
+| DELETE | `/users/:id` | Yes | Delete user |
+| PUT | `/users/:id/password` | Yes | Change password |
+| POST | `/users/:id/roles` | Yes | Assign role |
+| DELETE | `/users/:id/roles/:role_id` | Yes | Remove role |
+
+#### Roles & Permissions (6)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/roles` | Yes | List roles |
+| POST | `/roles` | Yes | Create role |
+| GET | `/roles/:id` | Yes | Get role |
+| PUT | `/roles/:id` | Yes | Update role |
+| DELETE | `/roles/:id` | Yes | Delete role |
+| GET | `/permissions` | Yes | List permissions |
+| POST | `/permissions` | Yes | Create permission |
+
+---
+
+### 2. Staff & HR
+
+#### Staff Management (9)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/staff` | Yes | List staff |
+| POST | `/staff` | Yes | Create staff |
+| GET | `/staff/:id` | Yes | Get staff |
+| PUT | `/staff/:id` | Yes | Update staff |
+| DELETE | `/staff/:id` | Yes | Delete staff |
+| GET | `/staff/search` | Yes | Search staff |
+| GET | `/staff/org-chart` | Yes | Get org chart |
+| GET | `/staff/:id/documents` | Yes | Get documents |
+| POST | `/staff/:id/documents` | Yes | Create document |
+
+#### Departments (6)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/departments` | Yes | List departments |
+| POST | `/departments` | Yes | Create department |
+| GET | `/departments/:id` | Yes | Get department |
+| PUT | `/departments/:id` | Yes | Update department |
+| DELETE | `/departments/:id` | Yes | Delete department |
+| GET | `/departments/:id/staff` | Yes | Get department staff |
+
+#### Attendance (4)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/attendance` | Yes | List attendance |
+| POST | `/attendance/check-in` | Yes | Check in |
+| POST | `/attendance/check-out` | Yes | Check out |
+| GET | `/attendance/my` | Yes | My attendance |
+| GET | `/attendance/reports` | Yes | Attendance reports |
+
+#### Leaves (6)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/leaves` | Yes | List leaves |
+| POST | `/leaves` | Yes | Create leave |
+| GET | `/leaves/:id` | Yes | Get leave |
+| GET | `/leaves/types` | Yes | Get leave types |
+| GET | `/leaves/balance` | Yes | Get leave balance |
+| PUT | `/leaves/:id/approve` | Yes | Approve leave |
+| PUT | `/leaves/:id/reject` | Yes | Reject leave |
+
+#### Performance Reviews (3)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/performance-reviews` | Yes | List reviews |
+| POST | `/performance-reviews` | Yes | Create review |
+| GET | `/performance-reviews/:id` | Yes | Get review |
+| PUT | `/performance-reviews/:id` | Yes | Update review |
+
+---
+
+### 3. Projects & Tasks
+
+#### Projects (13)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/projects` | Yes | List projects |
+| POST | `/projects` | Yes | Create project |
+| GET | `/projects/templates` | Yes | Get templates |
+| GET | `/projects/:id` | Yes | Get project |
+| PUT | `/projects/:id` | Yes | Update project |
+| DELETE | `/projects/:id` | Yes | Delete project |
+| GET | `/projects/:id/members` | Yes | Get members |
+| POST | `/projects/:id/members` | Yes | Add member |
+| DELETE | `/projects/:id/members/:userId` | Yes | Remove member |
+| GET | `/projects/:id/timeline` | Yes | Get timeline |
+| GET | `/projects/:id/budget` | Yes | Get budget |
+| GET | `/projects/:id/tasks` | Yes | Get tasks |
+| POST | `/projects/:id/tasks` | Yes | Create task |
+| GET | `/projects/:id/sprints` | Yes | Get sprints |
+| POST | `/projects/:id/sprints` | Yes | Create sprint |
+| GET | `/projects/:id/milestones` | Yes | Get milestones |
+| POST | `/projects/:id/milestones` | Yes | Create milestone |
+
+#### Tasks (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/tasks/:id` | Yes | Get task |
+| PUT | `/tasks/:id` | Yes | Update task |
+| DELETE | `/tasks/:id` | Yes | Delete task |
+| POST | `/tasks/:id/assign` | Yes | Assign task |
+| POST | `/tasks/:id/status` | Yes | Update status |
+| GET | `/tasks/:id/time-logs` | Yes | Get time logs |
+| POST | `/tasks/:id/time-logs` | Yes | Log time |
+
+#### Sprints (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/sprints/:id` | Yes | Get sprint |
+| PUT | `/sprints/:id` | Yes | Update sprint |
+| DELETE | `/sprints/:id` | Yes | Delete sprint |
+| POST | `/sprints/:id/start` | Yes | Start sprint |
+| POST | `/sprints/:id/complete` | Yes | Complete sprint |
+| GET | `/sprints/:id/burndown` | Yes | Get burndown |
+
+#### Milestones (4)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/milestones/:id` | Yes | Get milestone |
+| PUT | `/milestones/:id` | Yes | Update milestone |
+| DELETE | `/milestones/:id` | Yes | Delete milestone |
+
+---
+
+### 4. Pipelines & Kanban
+
+#### Pipelines (9)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/pipelines` | Yes | List pipelines |
+| POST | `/pipelines` | Yes | Create pipeline |
+| GET | `/pipelines/:id` | Yes | Get pipeline |
+| PUT | `/pipelines/:id` | Yes | Update pipeline |
+| DELETE | `/pipelines/:id` | Yes | Delete pipeline |
+| GET | `/pipelines/:id/stages` | Yes | Get stages |
+| POST | `/pipelines/:id/stages` | Yes | Create stage |
+| POST | `/pipelines/:id/move-task` | Yes | Move task |
+| GET | `/pipelines/:id/automations` | Yes | Get automations |
+| POST | `/pipelines/:id/automations` | Yes | Create automation |
+
+#### Stages (3)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| PUT | `/pipelines/stages/:id` | Yes | Update stage |
+| DELETE | `/pipelines/stages/:id` | Yes | Delete stage |
+
+#### Automations (4)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/automations/:id` | Yes | Get automation |
+| PUT | `/automations/:id` | Yes | Update automation |
+| DELETE | `/automations/:id` | Yes | Delete automation |
+
+---
+
+### 5. Clients & CRM
+
+#### Clients (9)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/clients` | Yes | List clients |
+| POST | `/clients` | Yes | Create client |
+| GET | `/clients/:id` | Yes | Get client |
+| PUT | `/clients/:id` | Yes | Update client |
+| DELETE | `/clients/:id` | Yes | Delete client |
+| GET | `/clients/:id/contacts` | Yes | Get contacts |
+| POST | `/clients/:id/contacts` | Yes | Create contact |
+| GET | `/clients/:id/projects` | Yes | Get projects |
+| GET | `/clients/:id/contracts` | Yes | Get contracts |
+| GET | `/clients/:id/invoices` | Yes | Get invoices |
+
+#### Contacts (4)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/contacts/:id` | Yes | Get contact |
+| PUT | `/contacts/:id` | Yes | Update contact |
+| DELETE | `/contacts/:id` | Yes | Delete contact |
+
+#### Contracts (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/contracts` | Yes | List contracts |
+| POST | `/contracts` | Yes | Create contract |
+| GET | `/contracts/:id` | Yes | Get contract |
+| PUT | `/contracts/:id` | Yes | Update contract |
+| DELETE | `/contracts/:id` | Yes | Delete contract |
+| POST | `/contracts/:id/renew` | Yes | Renew contract |
+| POST | `/contracts/:id/terminate` | Yes | Terminate contract |
+
+#### Proposals (4)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/proposals` | Yes | List proposals |
+| POST | `/proposals` | Yes | Create proposal |
+| GET | `/proposals/:id` | Yes | Get proposal |
+| PUT | `/proposals/:id` | Yes | Update proposal |
+| DELETE | `/proposals/:id` | Yes | Delete proposal |
+
+#### Tickets (8)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/tickets` | Yes | List tickets |
+| POST | `/tickets` | Yes | Create ticket |
+| GET | `/tickets/:id` | Yes | Get ticket |
+| PUT | `/tickets/:id` | Yes | Update ticket |
+| POST | `/tickets/:id/assign` | Yes | Assign ticket |
+| POST | `/tickets/:id/resolve` | Yes | Resolve ticket |
+| GET | `/tickets/:id/comments` | Yes | Get comments |
+| POST | `/tickets/:id/comments` | Yes | Create comment |
+
+---
+
+### 6. Finance
+
+#### Payroll (9)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/payroll` | Yes | List payroll |
+| POST | `/payroll/generate` | Yes | Generate payroll |
+| GET | `/payroll/:id` | Yes | Get payroll |
+| PUT | `/payroll/:id` | Yes | Update payroll |
+| POST | `/payroll/:id/process` | Yes | Process payroll |
+| POST | `/payroll/:id/publish` | Yes | Publish payroll |
+| GET | `/payroll/:id/payslips` | Yes | Get payslips |
+| GET | `/payroll/my` | Yes | My payroll |
+| GET | `/payroll/my/payslips/:id/download` | Yes | Download payslip |
+
+#### Salary Structures (5)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/salary-structures` | Yes | List structures |
+| POST | `/salary-structures` | Yes | Create structure |
+| GET | `/salary-structures/:id` | Yes | Get structure |
+| PUT | `/salary-structures/:id` | Yes | Update structure |
+| DELETE | `/salary-structures/:id` | Yes | Delete structure |
+
+#### Expenses (8)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/expenses` | Yes | List expenses |
+| POST | `/expenses` | Yes | Create expense |
+| GET | `/expenses/:id` | Yes | Get expense |
+| PUT | `/expenses/:id` | Yes | Update expense |
+| DELETE | `/expenses/:id` | Yes | Delete expense |
+| POST | `/expenses/:id/approve` | Yes | Approve expense |
+| POST | `/expenses/:id/reject` | Yes | Reject expense |
+| GET | `/expenses/my` | Yes | My expenses |
+
+#### Budgets (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/budgets` | Yes | List budgets |
+| POST | `/budgets` | Yes | Create budget |
+| GET | `/budgets/:id` | Yes | Get budget |
+| PUT | `/budgets/:id` | Yes | Update budget |
+| DELETE | `/budgets/:id` | Yes | Delete budget |
+| GET | `/budgets/:id/transactions` | Yes | Get transactions |
+| POST | `/budgets/:id/transactions` | Yes | Create transaction |
+
+---
+
+### 7. Communication
+
+#### Chat Rooms (13)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/chat/rooms` | Yes | List rooms |
+| POST | `/chat/rooms` | Yes | Create room |
+| GET | `/chat/rooms/:id` | Yes | Get room |
+| PUT | `/chat/rooms/:id` | Yes | Update room |
+| DELETE | `/chat/rooms/:id` | Yes | Delete room |
+| POST | `/chat/rooms/:id/join` | Yes | Join room |
+| POST | `/chat/rooms/:id/leave` | Yes | Leave room |
+| GET | `/chat/rooms/:id/messages` | Yes | Get messages |
+| POST | `/chat/rooms/:id/messages` | Yes | Send message |
+| GET | `/chat/rooms/:id/messages/:messageId/thread` | Yes | Get thread |
+| POST | `/chat/rooms/:id/read` | Yes | Mark as read |
+| GET | `/chat/search` | Yes | Search messages |
+
+#### Messages (3)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| PUT | `/chat/messages/:id` | Yes | Edit message |
+| DELETE | `/chat/messages/:id` | Yes | Delete message |
+| POST | `/chat/messages/:id/reactions` | Yes | Add reaction |
+
+#### Announcements (8)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/announcements` | Yes | List announcements |
+| POST | `/announcements` | Yes | Create announcement |
+| GET | `/announcements/:id` | Yes | Get announcement |
+| PUT | `/announcements/:id` | Yes | Update announcement |
+| DELETE | `/announcements/:id` | Yes | Delete announcement |
+| POST | `/announcements/:id/pin` | Yes | Pin announcement |
+| POST | `/announcements/:id/acknowledge` | Yes | Acknowledge |
+| GET | `/announcements/:id/acknowledgements` | Yes | Get acknowledgements |
+
+#### Notifications (8)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/notifications` | Yes | List notifications |
+| GET | `/notifications/unread-count` | Yes | Get unread count |
+| PUT | `/notifications/:id/read` | Yes | Mark as read |
+| PUT | `/notifications/read-all` | Yes | Mark all read |
+| DELETE | `/notifications/:id` | Yes | Delete notification |
+| GET | `/notifications/preferences` | Yes | Get preferences |
+| PUT | `/notifications/preferences` | Yes | Update preferences |
+
+---
+
+### 8. Culture & Events
+
+#### Events (10)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/culture/events` | Yes | List events |
+| POST | `/culture/events` | Yes | Create event |
+| GET | `/culture/events/:id` | Yes | Get event |
+| PUT | `/culture/events/:id` | Yes | Update event |
+| DELETE | `/culture/events/:id` | Yes | Delete event |
+| GET | `/culture/events/:id/participants` | Yes | Get participants |
+| POST | `/culture/events/:id/register` | Yes | Register |
+| DELETE | `/culture/events/:id/register/:user_id` | Yes | Cancel registration |
+| GET | `/culture/events/:id/gallery` | Yes | Get gallery |
+| POST | `/culture/events/:id/gallery` | Yes | Add gallery item |
+
+#### Trips (9)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/culture/trips` | Yes | List trips |
+| POST | `/culture/trips` | Yes | Create trip |
+| GET | `/culture/trips/:id` | Yes | Get trip |
+| PUT | `/culture/trips/:id` | Yes | Update trip |
+| DELETE | `/culture/trips/:id` | Yes | Delete trip |
+| GET | `/culture/trips/:id/participants` | Yes | Get participants |
+| POST | `/culture/trips/:id/register` | Yes | Register |
+| GET | `/culture/trips/:id/itinerary` | Yes | Get itinerary |
+| POST | `/culture/trips/:id/itinerary` | Yes | Add itinerary item |
+
+#### Polls (7)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/culture/polls` | Yes | List polls |
+| POST | `/culture/polls` | Yes | Create poll |
+| GET | `/culture/polls/:id` | Yes | Get poll |
+| GET | `/culture/polls/:id/options` | Yes | Get options |
+| GET | `/culture/polls/:id/results` | Yes | Get results |
+| POST | `/culture/polls/:id/vote` | Yes | Vote |
+
+#### Recognitions (5)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/culture/recognitions` | Yes | List recognitions |
+| POST | `/culture/recognitions` | Yes | Create recognition |
+| GET | `/culture/recognitions/:id` | Yes | Get recognition |
+| GET | `/culture/leaderboard` | Yes | Get leaderboard |
+
+---
+
+### 9. Audit & Compliance
+
+#### Audit Logs (6)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/audit-logs` | Yes | List audit logs |
+| GET | `/audit-logs/:id` | Yes | Get audit log |
+| GET | `/audit-logs/search` | Yes | Search audit logs |
+| GET | `/audit-logs/export` | Yes | Export audit logs |
+| GET | `/audit-logs/stats` | Yes | Get audit stats |
+
+#### Compliance (5)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/compliance/gdpr/export` | Yes | Export GDPR data |
+| POST | `/compliance/gdpr/delete-request` | Yes | GDPR delete request |
+| GET | `/compliance/retention-policies` | Yes | Get retention policies |
+| PUT | `/compliance/retention-policies/:id` | Yes | Update retention policy |
+| GET | `/compliance/reports` | Yes | Get compliance reports |
+
+---
+
+### 10. File Upload
+
+#### Upload Endpoints (2)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/upload` | Yes | Upload file |
+| GET | `/files/:folder/:filename` | No | Serve uploaded file |
+
 ```typescript
-// hooks/use-auth.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authService } from '@/services/auth';
-import { useAuthStore } from '@/stores/auth-store';
-
-export const useLogin = () => {
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const setUser = useAuthStore((state) => state.setUser);
-
-  return useMutation({
-    mutationFn: authService.login,
-    onSuccess: (data) => {
-      setAuth(data.data);
-      // Store in localStorage for axios interceptor
-      localStorage.setItem('access_token', data.data.access_token);
-      localStorage.setItem('refresh_token', data.data.refresh_token);
-    },
-  });
+// services/upload.ts
+export const uploadService = {
+  uploadFile: (file: File, folder?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (folder) formData.append('folder', folder);
+    
+    return api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+  },
 };
 
-export const useGetMe = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  return useQuery({
-    queryKey: ['me'],
-    queryFn: async () => {
-      const response = await authService.getMe();
-      return response.data;
-    },
-    enabled: isAuthenticated,
-  });
-};
-
-export const useLogout = () => {
-  const logout = useAuthStore((state) => state.logout);
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: authService.logout,
-    onSuccess: () => {
-      logout();
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      queryClient.clear();
-    },
-  });
+// Usage
+const handleUpload = async (file: File) => {
+  const response = await uploadService.uploadFile(file, 'avatars');
+  return response.data.data.url; // http://localhost:8080/files/avatars/filename.jpg
 };
 ```
+
+**Supported File Types:**
+- Images: JPEG, PNG, GIF, WebP
+- Documents: PDF, TXT, DOC, DOCX, XLS, XLSX
+- Max Size: 10MB
+
+---
+
+### 11. WebSocket
+
+#### Connection
+```javascript
+const token = localStorage.getItem('access_token');
+const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+
+ws.onopen = () => {
+  console.log('WebSocket connected');
+  
+  // Join a room
+  ws.send(JSON.stringify({
+    type: 'join_room',
+    room_id: 'room-uuid-here'
+  }));
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  
+  switch (message.type) {
+    case 'chat':
+      // Handle chat message
+      console.log('New message:', message.content);
+      break;
+    case 'notification':
+      // Handle notification
+      toast.info(message.data.title);
+      break;
+    case 'presence':
+      // Handle user presence
+      console.log('User status:', message.data.status);
+      break;
+    case 'typing':
+      // Handle typing indicator
+      showTypingIndicator(message.sender_id);
+      break;
+  }
+};
+
+ws.onclose = () => {
+  console.log('WebSocket disconnected');
+  // Auto-reconnect logic
+};
+```
+
+#### Message Types
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `chat` | Bidirectional | Chat messages |
+| `notification` | Server → Client | System notifications |
+| `presence` | Bidirectional | User online/offline/away/busy |
+| `typing` | Client → Server | Typing indicators |
+| `join_room` | Client → Server | Join a chat room |
+| `leave_room` | Client → Server | Leave a chat room |
+| `ping` | Client → Server | Heartbeat ping |
+| `pong` | Server → Client | Heartbeat pong |
 
 ---
 
 ## TypeScript Types
 
+### Updated Types (with roles)
 ```typescript
 // types/index.ts
 
-// User Types
 export interface User {
   id: string;
   email: string;
@@ -298,6 +723,7 @@ export interface User {
   phone?: string;
   avatar_url?: string;
   status: 'active' | 'pending' | 'suspended' | 'terminated';
+  roles: string[]; // NEW: Roles from JWT
   mfa_enabled: boolean;
   email_verified: boolean;
   last_login_at?: string;
@@ -321,1092 +747,44 @@ export interface Permission {
   description?: string;
 }
 
-// Staff Types
-export interface Employee {
-  id: string;
-  user_id: string;
-  employee_code: string;
-  department_id?: string;
-  manager_id?: string;
-  hire_date: string;
-  job_title: string;
-  employment_type: 'full_time' | 'part_time' | 'contract' | 'intern' | 'freelance';
-  status: string;
-  salary?: number;
-  currency: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  created_at: string;
-}
-
-export interface Department {
-  id: string;
-  name: string;
-  code: string;
-  parent_id?: string;
-  manager_id?: string;
-  description?: string;
-  created_at: string;
-}
-
-export interface Attendance {
-  id: string;
-  employee_id: string;
-  date: string;
-  check_in?: string;
-  check_out?: string;
-  status: string;
-  notes?: string;
-}
-
-export interface LeaveRequest {
-  id: string;
-  employee_id: string;
-  type: string;
-  start_date: string;
-  end_date: string;
-  reason?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  approved_by?: string;
-  approved_at?: string;
-  rejection_reason?: string;
-}
-
-// Project Types
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  client_id?: string;
-  manager_id: string;
-  status: 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  start_date?: string;
-  end_date?: string;
-  budget?: number;
-  pipeline_id?: string;
-  tags: string[];
-  created_at: string;
-}
-
-export interface Task {
-  id: string;
-  project_id: string;
-  title: string;
-  description?: string;
-  assignee_id?: string;
-  status: 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  due_date?: string;
-  estimated_hours?: number;
-  actual_hours: number;
-  parent_id?: string;
-  stage_id?: string;
-  created_at: string;
-}
-
-export interface Sprint {
-  id: string;
-  project_id: string;
-  name: string;
-  goal?: string;
-  start_date: string;
-  end_date: string;
-  status: 'planning' | 'active' | 'completed';
-  velocity?: number;
-  created_at: string;
-}
-
-export interface Milestone {
-  id: string;
-  project_id: string;
-  name: string;
-  description?: string;
-  due_date: string;
-  status: 'pending' | 'in_progress' | 'achieved' | 'missed';
-  deliverables?: string[];
-  created_at: string;
-}
-
-// Client Types
-export interface Client {
-  id: string;
-  name: string;
-  industry?: string;
-  website?: string;
-  address?: string;
-  tax_id?: string;
-  status: 'active' | 'inactive' | 'prospect';
-  account_manager_id?: string;
-  notes?: string;
-  created_at: string;
-}
-
-// Financial Types
-export interface Expense {
-  id: string;
-  employee_id: string;
-  category: string;
-  amount: number;
-  description?: string;
-  receipt_url?: string;
-  incurred_at: string;
-  status: 'pending' | 'approved' | 'rejected';
-  approved_by?: string;
-  approved_at?: string;
-  created_at: string;
-}
-
-export interface Budget {
-  id: string;
-  project_id: string;
-  name: string;
-  total_amount: number;
-  spent_amount: number;
-  start_date: string;
-  end_date: string;
-  status: 'active' | 'closed';
-  created_at: string;
-}
-
-// Communication Types
-export interface ChatRoom {
-  id: string;
-  name: string;
-  type: 'direct' | 'group' | 'project';
-  project_id?: string;
-  created_by: string;
-  member_count?: number;
-  unread_count?: number;
-  created_at: string;
-}
-
-export interface Message {
-  id: string;
-  room_id: string;
-  sender_id: string;
-  content: string;
-  type: 'text' | 'file' | 'system';
-  parent_id?: string;
-  edited_at?: string;
-  reactions?: Reaction[];
-  created_at: string;
-}
-
-export interface Reaction {
-  emoji: string;
-  user_id: string;
-  created_at: string;
-}
-
-export interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  type: 'company' | 'department' | 'project';
-  scope_id?: string;
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  published_by: string;
-  published_at: string;
-  expires_at?: string;
-  is_pinned: boolean;
-  acknowledged_count: number;
-  is_acknowledged?: boolean;
-  created_at: string;
-}
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  content: string;
-  data?: Record<string, any>;
-  is_read: boolean;
-  read_at?: string;
-  created_at: string;
-}
-
-// Culture Types
-export interface Event {
-  id: string;
-  title: string;
-  description?: string;
-  type: 'hackathon' | 'game_night' | 'team_building' | 'party';
-  start_date: string;
-  end_date: string;
-  location?: string;
-  max_participants?: number;
-  organizer_id: string;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
-  banner_url?: string;
-  created_at: string;
-}
-
-export interface Poll {
-  id: string;
-  title: string;
-  description?: string;
-  type: 'single_choice' | 'multiple_choice' | 'rating';
-  end_date?: string;
-  created_by: string;
-  status: 'draft' | 'published' | 'closed';
-  created_at: string;
-}
-
-export interface Recognition {
-  id: string;
-  from_user_id: string;
-  to_user_id: string;
-  type: 'kudos' | 'award' | 'milestone';
-  message: string;
-  points: number;
-  created_at: string;
-}
+// ... (rest of types remain the same)
 ```
 
 ---
 
-## Tanstack Query Setup
+## Tanstack Query Patterns
 
-### Query Client Configuration
+### Service Pattern
 ```typescript
-// providers/query-provider.tsx
-'use client';
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useState } from 'react';
-
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000, // 1 minute
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-        },
-      })
-  );
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  );
-}
-```
-
----
-
-## API Integration by Domain
-
-### 1. Users & RBAC
-
-```typescript
-// services/users.ts
-import api from '@/lib/axios';
-import { ApiResponse, PaginatedResponse } from '@/types/api';
-import { User, Role, Permission } from '@/types';
-
-export const userService = {
-  // Get all users
-  getUsers: async (params?: { page?: number; limit?: number; search?: string }) => {
-    const response = await api.get('/users', { params });
-    return response.data as PaginatedResponse<User>;
-  },
-
-  // Get user by ID
-  getUser: async (id: string) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data as ApiResponse<User>;
-  },
-
-  // Update user
-  updateUser: async (id: string, data: Partial<User>) => {
-    const response = await api.put(`/users/${id}`, data);
-    return response.data as ApiResponse<User>;
-  },
-
-  // Delete user
-  deleteUser: async (id: string) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-
-  // Change password
-  changePassword: async (id: string, data: { current_password: string; new_password: string }) => {
-    const response = await api.put(`/users/${id}/password`, data);
-    return response.data;
-  },
-
-  // Assign role
-  assignRole: async (userId: string, roleId: string) => {
-    const response = await api.post(`/users/${userId}/roles`, { role_id: roleId });
-    return response.data;
-  },
-};
-
-// hooks/use-users.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userService } from '@/services/users';
-
-export const useUsers = (params?: { page?: number; limit?: number }) => {
-  return useQuery({
-    queryKey: ['users', params],
-    queryFn: () => userService.getUsers(params),
-  });
-};
-
-export const useUser = (id: string) => {
-  return useQuery({
-    queryKey: ['user', id],
-    queryFn: () => userService.getUser(id),
-    enabled: !!id,
-  });
-};
-
-export const useUpdateUser = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
-      userService.updateUser(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['user', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-  });
-};
-
-export const useDeleteUser = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: userService.deleteUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-  });
-};
-
-// services/roles.ts
+// services/[domain].ts
 import api from '@/lib/axios';
 
-export const roleService = {
-  getRoles: async () => {
-    const response = await api.get('/roles');
-    return response.data as PaginatedResponse<Role>;
-  },
-
-  createRole: async (data: Partial<Role>) => {
-    const response = await api.post('/roles', data);
-    return response.data as ApiResponse<Role>;
-  },
-
-  getPermissions: async () => {
-    const response = await api.get('/permissions');
-    return response.data as PaginatedResponse<Permission>;
-  },
-};
-
-// hooks/use-roles.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export const useRoles = () => {
-  return useQuery({
-    queryKey: ['roles'],
-    queryFn: () => roleService.getRoles(),
-  });
-};
-
-export const usePermissions = () => {
-  return useQuery({
-    queryKey: ['permissions'],
-    queryFn: () => roleService.getPermissions(),
-  });
+export const domainService = {
+  list: (params?: any) => api.get('/endpoint', { params }),
+  get: (id: string) => api.get(`/endpoint/${id}`),
+  create: (data: any) => api.post('/endpoint', data),
+  update: (id: string, data: any) => api.put(`/endpoint/${id}`, data),
+  delete: (id: string) => api.delete(`/endpoint/${id}`),
 };
 ```
 
-### 2. Staff & HR
-
+### Hook Pattern
 ```typescript
-// services/staff.ts
-import api from '@/lib/axios';
-import { Employee, Department, Attendance, LeaveRequest } from '@/types';
-
-export const staffService = {
-  // Employees
-  getEmployees: async (params?: { page?: number; limit?: number; department_id?: string }) => {
-    const response = await api.get('/staff', { params });
-    return response.data;
-  },
-
-  getEmployee: async (id: string) => {
-    const response = await api.get(`/staff/${id}`);
-    return response.data;
-  },
-
-  createEmployee: async (data: Partial<Employee>) => {
-    const response = await api.post('/staff', data);
-    return response.data;
-  },
-
-  updateEmployee: async (id: string, data: Partial<Employee>) => {
-    const response = await api.put(`/staff/${id}`, data);
-    return response.data;
-  },
-
-  // Departments
-  getDepartments: async () => {
-    const response = await api.get('/departments');
-    return response.data;
-  },
-
-  createDepartment: async (data: Partial<Department>) => {
-    const response = await api.post('/departments', data);
-    return response.data;
-  },
-
-  // Attendance
-  checkIn: async (data: { employee_id: string; notes?: string }) => {
-    const response = await api.post('/attendance/check-in', data);
-    return response.data;
-  },
-
-  checkOut: async (data: { employee_id: string; notes?: string }) => {
-    const response = await api.post('/attendance/check-out', data);
-    return response.data;
-  },
-
-  getMyAttendance: async () => {
-    const response = await api.get('/attendance/my');
-    return response.data;
-  },
-
-  // Leaves
-  getLeaves: async () => {
-    const response = await api.get('/leaves');
-    return response.data;
-  },
-
-  createLeave: async (data: Partial<LeaveRequest>) => {
-    const response = await api.post('/leaves', data);
-    return response.data;
-  },
-
-  approveLeave: async (id: string) => {
-    const response = await api.put(`/leaves/${id}/approve`);
-    return response.data;
-  },
-
-  rejectLeave: async (id: string, reason: string) => {
-    const response = await api.put(`/leaves/${id}/reject`, { reason });
-    return response.data;
-  },
-};
-
-// hooks/use-staff.ts
+// hooks/use-[domain].ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { domainService } from '@/services/[domain]';
 
-export const useEmployees = () => {
-  return useQuery({
-    queryKey: ['employees'],
-    queryFn: () => staffService.getEmployees(),
+export const useDomainList = (params?: any) =>
+  useQuery({
+    queryKey: ['domain', params],
+    queryFn: () => domainService.list(params).then(r => r.data),
   });
-};
 
-export const useCreateEmployee = () => {
+export const useDomainCreate = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: staffService.createEmployee,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-    },
-  });
-};
-
-export const useDepartments = () => {
-  return useQuery({
-    queryKey: ['departments'],
-    queryFn: () => staffService.getDepartments(),
-  });
-};
-
-export const useCreateDepartment = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: staffService.createDepartment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-    },
-  });
-};
-
-export const useAttendance = () => {
-  return useQuery({
-    queryKey: ['attendance'],
-    queryFn: () => staffService.getMyAttendance(),
-  });
-};
-
-export const useCheckIn = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: staffService.checkIn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
-    },
-  });
-};
-
-export const useLeaves = () => {
-  return useQuery({
-    queryKey: ['leaves'],
-    queryFn: () => staffService.getLeaves(),
-  });
-};
-```
-
-### 3. Project Management
-
-```typescript
-// services/projects.ts
-import api from '@/lib/axios';
-import { Project, Task, Sprint, Milestone } from '@/types';
-
-export const projectService = {
-  // Projects
-  getProjects: async (params?: { status?: string; priority?: string }) => {
-    const response = await api.get('/projects', { params });
-    return response.data;
-  },
-
-  getProject: async (id: string) => {
-    const response = await api.get(`/projects/${id}`);
-    return response.data;
-  },
-
-  createProject: async (data: Partial<Project>) => {
-    const response = await api.post('/projects', data);
-    return response.data;
-  },
-
-  updateProject: async (id: string, data: Partial<Project>) => {
-    const response = await api.put(`/projects/${id}`, data);
-    return response.data;
-  },
-
-  deleteProject: async (id: string) => {
-    const response = await api.delete(`/projects/${id}`);
-    return response.data;
-  },
-
-  // Tasks
-  getTasks: async (projectId: string) => {
-    const response = await api.get(`/projects/${projectId}/tasks`);
-    return response.data;
-  },
-
-  createTask: async (projectId: string, data: Partial<Task>) => {
-    const response = await api.post(`/projects/${projectId}/tasks`, data);
-    return response.data;
-  },
-
-  assignTask: async (taskId: string, assigneeId: string) => {
-    const response = await api.post(`/tasks/${taskId}/assign`, { assignee_id: assigneeId });
-    return response.data;
-  },
-
-  updateTaskStatus: async (taskId: string, status: string) => {
-    const response = await api.post(`/tasks/${taskId}/status`, { status });
-    return response.data;
-  },
-
-  // Sprints
-  getSprints: async (projectId: string) => {
-    const response = await api.get(`/projects/${projectId}/sprints`);
-    return response.data;
-  },
-
-  createSprint: async (projectId: string, data: Partial<Sprint>) => {
-    const response = await api.post(`/projects/${projectId}/sprints`, data);
-    return response.data;
-  },
-
-  startSprint: async (sprintId: string) => {
-    const response = await api.post(`/sprints/${sprintId}/start`);
-    return response.data;
-  },
-
-  completeSprint: async (sprintId: string) => {
-    const response = await api.post(`/sprints/${sprintId}/complete`);
-    return response.data;
-  },
-
-  // Milestones
-  getMilestones: async (projectId: string) => {
-    const response = await api.get(`/projects/${projectId}/milestones`);
-    return response.data;
-  },
-
-  createMilestone: async (projectId: string, data: Partial<Milestone>) => {
-    const response = await api.post(`/projects/${projectId}/milestones`, data);
-    return response.data;
-  },
-
-  // Pipelines
-  getPipelines: async () => {
-    const response = await api.get('/pipelines');
-    return response.data;
-  },
-
-  createPipeline: async (data: { name: string; description?: string }) => {
-    const response = await api.post('/pipelines', data);
-    return response.data;
-  },
-};
-
-// hooks/use-projects.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export const useProjects = () => {
-  return useQuery({
-    queryKey: ['projects'],
-    queryFn: () => projectService.getProjects(),
-  });
-};
-
-export const useProject = (id: string) => {
-  return useQuery({
-    queryKey: ['project', id],
-    queryFn: () => projectService.getProject(id),
-    enabled: !!id,
-  });
-};
-
-export const useCreateProject = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: projectService.createProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
-  });
-};
-
-export const useTasks = (projectId: string) => {
-  return useQuery({
-    queryKey: ['tasks', projectId],
-    queryFn: () => projectService.getTasks(projectId),
-    enabled: !!projectId,
-  });
-};
-
-export const useCreateTask = (projectId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: Partial<Task>) => projectService.createTask(projectId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-    },
-  });
-};
-
-export const useAssignTask = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ taskId, assigneeId }: { taskId: string; assigneeId: string }) =>
-      projectService.assignTask(taskId, assigneeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-};
-
-export const useSprints = (projectId: string) => {
-  return useQuery({
-    queryKey: ['sprints', projectId],
-    queryFn: () => projectService.getSprints(projectId),
-    enabled: !!projectId,
-  });
-};
-
-export const usePipelines = () => {
-  return useQuery({
-    queryKey: ['pipelines'],
-    queryFn: () => projectService.getPipelines(),
-  });
-};
-```
-
-### 4. Client & Financial
-
-```typescript
-// services/clients.ts
-import api from '@/lib/axios';
-import { Client, Expense, Budget } from '@/types';
-
-export const clientService = {
-  // Clients
-  getClients: async () => {
-    const response = await api.get('/clients');
-    return response.data;
-  },
-
-  getClient: async (id: string) => {
-    const response = await api.get(`/clients/${id}`);
-    return response.data;
-  },
-
-  createClient: async (data: Partial<Client>) => {
-    const response = await api.post('/clients', data);
-    return response.data;
-  },
-
-  updateClient: async (id: string, data: Partial<Client>) => {
-    const response = await api.put(`/clients/${id}`, data);
-    return response.data;
-  },
-
-  // Expenses
-  getExpenses: async () => {
-    const response = await api.get('/expenses');
-    return response.data;
-  },
-
-  getMyExpenses: async () => {
-    const response = await api.get('/expenses/my');
-    return response.data;
-  },
-
-  createExpense: async (data: Partial<Expense>) => {
-    const response = await api.post('/expenses', data);
-    return response.data;
-  },
-
-  approveExpense: async (id: string) => {
-    const response = await api.post(`/expenses/${id}/approve`);
-    return response.data;
-  },
-
-  // Budgets
-  getBudgets: async () => {
-    const response = await api.get('/budgets');
-    return response.data;
-  },
-
-  createBudget: async (data: Partial<Budget>) => {
-    const response = await api.post('/budgets', data);
-    return response.data;
-  },
-};
-
-// hooks/use-clients.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export const useClients = () => {
-  return useQuery({
-    queryKey: ['clients'],
-    queryFn: () => clientService.getClients(),
-  });
-};
-
-export const useCreateClient = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: clientService.createClient,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-    },
-  });
-};
-
-export const useExpenses = () => {
-  return useQuery({
-    queryKey: ['expenses'],
-    queryFn: () => clientService.getExpenses(),
-  });
-};
-
-export const useMyExpenses = () => {
-  return useQuery({
-    queryKey: ['my-expenses'],
-    queryFn: () => clientService.getMyExpenses(),
-  });
-};
-
-export const useCreateExpense = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: clientService.createExpense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses', 'my-expenses'] });
-    },
-  });
-};
-
-export const useApproveExpense = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: clientService.approveExpense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    },
-  });
-};
-```
-
-### 5. Communication
-
-```typescript
-// services/communication.ts
-import api from '@/lib/axios';
-import { ChatRoom, Message, Announcement, Notification } from '@/types';
-
-export const communicationService = {
-  // Chat Rooms
-  getRooms: async () => {
-    const response = await api.get('/chat/rooms');
-    return response.data;
-  },
-
-  createRoom: async (data: { name: string; type: string; member_ids?: string[] }) => {
-    const response = await api.post('/chat/rooms', data);
-    return response.data;
-  },
-
-  joinRoom: async (roomId: string) => {
-    const response = await api.post(`/chat/rooms/${roomId}/join`);
-    return response.data;
-  },
-
-  getMessages: async (roomId: string, params?: { page?: number; limit?: number }) => {
-    const response = await api.get(`/chat/rooms/${roomId}/messages`, { params });
-    return response.data;
-  },
-
-  sendMessage: async (roomId: string, data: { content: string; type?: string }) => {
-    const response = await api.post(`/chat/rooms/${roomId}/messages`, data);
-    return response.data;
-  },
-
-  // Announcements
-  getAnnouncements: async () => {
-    const response = await api.get('/announcements');
-    return response.data;
-  },
-
-  createAnnouncement: async (data: Partial<Announcement>) => {
-    const response = await api.post('/announcements', data);
-    return response.data;
-  },
-
-  acknowledgeAnnouncement: async (id: string) => {
-    const response = await api.post(`/announcements/${id}/acknowledge`);
-    return response.data;
-  },
-
-  // Notifications
-  getNotifications: async () => {
-    const response = await api.get('/notifications');
-    return response.data;
-  },
-
-  getUnreadCount: async () => {
-    const response = await api.get('/notifications/unread-count');
-    return response.data;
-  },
-
-  markAsRead: async (id: string) => {
-    const response = await api.put(`/notifications/${id}/read`);
-    return response.data;
-  },
-
-  markAllAsRead: async () => {
-    const response = await api.put('/notifications/read-all');
-    return response.data;
-  },
-};
-
-// hooks/use-communication.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export const useRooms = () => {
-  return useQuery({
-    queryKey: ['rooms'],
-    queryFn: () => communicationService.getRooms(),
-  });
-};
-
-export const useMessages = (roomId: string) => {
-  return useQuery({
-    queryKey: ['messages', roomId],
-    queryFn: () => communicationService.getMessages(roomId),
-    enabled: !!roomId,
-  });
-};
-
-export const useSendMessage = (roomId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: { content: string }) =>
-      communicationService.sendMessage(roomId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', roomId] });
-    },
-  });
-};
-
-export const useAnnouncements = () => {
-  return useQuery({
-    queryKey: ['announcements'],
-    queryFn: () => communicationService.getAnnouncements(),
-  });
-};
-
-export const useNotifications = () => {
-  return useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => communicationService.getNotifications(),
-  });
-};
-
-export const useUnreadCount = () => {
-  return useQuery({
-    queryKey: ['unread-count'],
-    queryFn: () => communicationService.getUnreadCount(),
-  });
-};
-
-export const useMarkAsRead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: communicationService.markAsRead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-    },
-  });
-};
-```
-
-### 6. Culture & Events
-
-```typescript
-// services/culture.ts
-import api from '@/lib/axios';
-import { Event, Poll, Recognition } from '@/types';
-
-export const cultureService = {
-  // Events
-  getEvents: async () => {
-    const response = await api.get('/culture/events');
-    return response.data;
-  },
-
-  createEvent: async (data: Partial<Event>) => {
-    const response = await api.post('/culture/events', data);
-    return response.data;
-  },
-
-  registerForEvent: async (eventId: string) => {
-    const response = await api.post(`/culture/events/${eventId}/register`);
-    return response.data;
-  },
-
-  // Polls
-  getPolls: async () => {
-    const response = await api.get('/culture/polls');
-    return response.data;
-  },
-
-  createPoll: async (data: Partial<Poll> & { options: Array<{ text: string; order?: number }> }) => {
-    const response = await api.post('/culture/polls', data);
-    return response.data;
-  },
-
-  voteInPoll: async (pollId: string, optionId: string) => {
-    const response = await api.post(`/culture/polls/${pollId}/vote`, { option_id: optionId });
-    return response.data;
-  },
-
-  // Recognitions
-  getRecognitions: async () => {
-    const response = await api.get('/culture/recognitions');
-    return response.data;
-  },
-
-  createRecognition: async (data: Partial<Recognition>) => {
-    const response = await api.post('/culture/recognitions', data);
-    return response.data;
-  },
-
-  getLeaderboard: async () => {
-    const response = await api.get('/culture/leaderboard');
-    return response.data;
-  },
-};
-
-// hooks/use-culture.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export const useEvents = () => {
-  return useQuery({
-    queryKey: ['events'],
-    queryFn: () => cultureService.getEvents(),
-  });
-};
-
-export const useCreateEvent = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: cultureService.createEvent,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-    },
-  });
-};
-
-export const usePolls = () => {
-  return useQuery({
-    queryKey: ['polls'],
-    queryFn: () => cultureService.getPolls(),
-  });
-};
-
-export const useVoteInPoll = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ pollId, optionId }: { pollId: string; optionId: string }) =>
-      cultureService.voteInPoll(pollId, optionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['polls'] });
-    },
-  });
-};
-
-export const useLeaderboard = () => {
-  return useQuery({
-    queryKey: ['leaderboard'],
-    queryFn: () => cultureService.getLeaderboard(),
+    mutationFn: domainService.create,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['domain'] }),
   });
 };
 ```
@@ -1415,290 +793,70 @@ export const useLeaderboard = () => {
 
 ## Error Handling
 
-### Global Error Handler
-```typescript
-// components/error-boundary.tsx
-'use client';
+### Standard Error Codes
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password |
+| `TOKEN_EXPIRED` | 401 | JWT token expired |
+| `TOKEN_INVALID` | 401 | Invalid JWT token |
+| `UNAUTHORIZED` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `VALIDATION_ERROR` | 400 | Invalid request data |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
+| `INTERNAL_ERROR` | 500 | Server error |
+| `FILE_TOO_LARGE` | 413 | File exceeds size limit |
+| `INVALID_FILE_TYPE` | 400 | Unsupported file type |
 
-import { Component, ReactNode } from 'react';
+---
 
-interface Props {
-  children: ReactNode;
-}
+## Swagger Documentation Status
 
-interface State {
-  hasError: boolean;
-  error?: Error;
-}
+**Total Endpoints:** 194
+**Swagger Documented:** ~168 (86.6%)
+**Missing Swagger Docs:**
+- Upload handler (new - needs @Router annotations)
+- Some utility endpoints
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
-          <p className="text-gray-600 mb-4">{this.state.error?.message}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Reload Page
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+**To view Swagger:**
 ```
-
-### API Error Hook
-```typescript
-// hooks/use-api-error.ts
-import { useToast } from '@/components/ui/use-toast';
-import { AxiosError } from 'axios';
-
-export const useApiError = () => {
-  const { toast } = useToast();
-
-  const handleError = (error: unknown) => {
-    if (error instanceof AxiosError) {
-      const errorData = error.response?.data;
-      
-      if (errorData?.error?.details) {
-        // Validation errors
-        errorData.error.details.forEach((detail: any) => {
-          toast({
-            title: 'Validation Error',
-            description: `${detail.field}: ${detail.message}`,
-            variant: 'destructive',
-          });
-        });
-      } else {
-        // General error
-        toast({
-          title: 'Error',
-          description: errorData?.error?.message || 'An unexpected error occurred',
-          variant: 'destructive',
-        });
-      }
-    } else {
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  return { handleError };
-};
+http://localhost:8080/swagger/index.html
 ```
 
 ---
 
-## Common Patterns
+## Quick Reference
 
-### Loading States
+### Auth Headers
+```
+Authorization: Bearer <token>
+X-Request-ID: <uuid>
+```
+
+### Pagination Params
+```
+?page=1&limit=20&sort=-created_at
+```
+
+### Search Params
+```
+?search=query&status=active&department_id=uuid
+```
+
+### File Upload
 ```typescript
-// components/loading-spinner.tsx
-export function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center p-4">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-    </div>
-  );
-}
-```
+const formData = new FormData();
+formData.append('file', file);
+formData.append('folder', 'avatars');
 
-### Empty State
-```typescript
-// components/empty-state.tsx
-import { FolderOpen } from 'lucide-react';
-
-interface EmptyStateProps {
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}
-
-export function EmptyState({ title, description, action }: EmptyStateProps) {
-  return (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <FolderOpen className="h-12 w-12 text-gray-400 mb-4" />
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-500 mb-4">{description}</p>
-      {action}
-    </div>
-  );
-}
-```
-
-### Pagination Hook
-```typescript
-// hooks/use-pagination.ts
-import { useState } from 'react';
-
-export const usePagination = (initialPage = 1, initialLimit = 20) => {
-  const [page, setPage] = useState(initialPage);
-  const [limit, setLimit] = useState(initialLimit);
-
-  return {
-    page,
-    limit,
-    setPage,
-    setLimit,
-    offset: (page - 1) * limit,
-  };
-};
-```
-
-### Optimistic Updates
-```typescript
-// Example: Optimistic update for task status
-export const useUpdateTaskStatus = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ taskId, status }: { taskId: string; status: string }) =>
-      projectService.updateTaskStatus(taskId, status),
-    onMutate: async ({ taskId, status }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-
-      // Snapshot previous value
-      const previousTasks = queryClient.getQueryData(['tasks']);
-
-      // Optimistically update
-      queryClient.setQueryData(['tasks'], (old: any) => ({
-        ...old,
-        data: old.data.map((task: Task) =>
-          task.id === taskId ? { ...task, status } : task
-        ),
-      }));
-
-      return { previousTasks };
-    },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      queryClient.setQueryData(['tasks'], context?.previousTasks);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-};
-```
-
----
-
-## File Structure
-
-```
-frontend/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/
-│   │   └── register/
-│   ├── (dashboard)/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── staff/
-│   │   ├── projects/
-│   │   ├── clients/
-│   │   ├── communication/
-│   │   └── culture/
-│   ├── layout.tsx
-│   └── providers.tsx
-├── components/
-│   ├── ui/              # shadcn/ui components
-│   ├── forms/           # Form components
-│   ├── tables/          # Data table components
-│   ├── modals/          # Modal/Dialog components
-│   └── layout/          # Layout components
-├── hooks/
-│   ├── use-auth.ts
-│   ├── use-users.ts
-│   ├── use-staff.ts
-│   ├── use-projects.ts
-│   ├── use-clients.ts
-│   ├── use-communication.ts
-│   └── use-culture.ts
-├── services/
-│   ├── auth.ts
-│   ├── users.ts
-│   ├── staff.ts
-│   ├── projects.ts
-│   ├── clients.ts
-│   ├── communication.ts
-│   └── culture.ts
-├── stores/
-│   ├── auth-store.ts
-│   └── ui-store.ts
-├── types/
-│   └── index.ts
-├── lib/
-│   ├── axios.ts
-│   └── utils.ts
-└── providers/
-    └── query-provider.tsx
-```
-
----
-
-## Environment Setup
-
-### Install Dependencies
-```bash
-# Initialize shadcn/ui
-npx shadcn-ui@latest init
-
-# Install required components
-npx shadcn-ui@latest add button card dialog form input label select table tabs toast
-
-# Install additional dependencies
-npm install axios @tanstack/react-query @tanstack/react-query-devtools zustand lucide-react
-
-# Install form handling (optional)
-npm install react-hook-form @hookform/resolvers zod
-```
-
-### Next.js Config
-```typescript
-// next.config.js
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
-      },
-    ];
-  },
-};
-
-module.exports = nextConfig;
+api.post('/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 ```
 
 ---
 
 ## Support
 
-- **Backend API**: http://localhost:8080/swagger/index.html
-- **Repository**: https://github.com/asthrix/sync-work-server
-- **Issues**: https://github.com/asthrix/sync-work-server/issues
+- **Backend API:** http://localhost:8080/swagger/index.html
+- **Repository:** https://github.com/asthrix/sync-work-server
+- **Issues:** https://github.com/asthrix/sync-work-server/issues
