@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,12 +24,29 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Search, Plus, Mail, Phone, MoreHorizontal, AlertCircle } from 'lucide-react';
+import { Search, Plus, Mail, Phone, MoreHorizontal, AlertCircle, Eye, Pencil, Trash2 } from 'lucide-react';
 import { staggerContainer, itemVariants } from '@/lib/animations/variants';
 import { PermissionGate } from '@/components/rbac/permission-gate';
 import { Permissions } from '@/lib/rbac/permissions';
-import { useEmployees, useDepartments, useCreateEmployee } from '@/hooks/use-staff';
+import { useEmployees, useDepartments, useCreateEmployee, useDeleteEmployee } from '@/hooks/use-staff';
+import { useUsers } from '@/hooks/use-users';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { employeeSchema, EmployeeFormData } from '@/lib/validations/forms';
@@ -59,6 +76,8 @@ function EmployeeSkeleton() {
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteEmployeeId, setDeleteEmployeeId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useEmployees({
     search: searchQuery,
@@ -66,10 +85,26 @@ export default function StaffPage() {
   });
   
   const { data: departmentsData, isLoading: departmentsLoading } = useDepartments();
+  const { data: usersData } = useUsers({ limit: 1000 });
   const createEmployee = useCreateEmployee();
+  const deleteEmployee = useDeleteEmployee();
 
   const employees = employeesData?.data || [];
   const departments = departmentsData?.data || [];
+  const users = usersData?.data || [];
+
+  // Create lookup maps
+  const usersById = useMemo(() => {
+    const map = new Map();
+    users.forEach((user: any) => map.set(user.id, user));
+    return map;
+  }, [users]);
+
+  const departmentsById = useMemo(() => {
+    const map = new Map();
+    departments.forEach((dept: any) => map.set(dept.id, dept));
+    return map;
+  }, [departments]);
 
   const {
     register,
@@ -93,6 +128,31 @@ export default function StaffPage() {
       const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to create employee';
       toast.error(errorMessage);
     }
+  };
+
+  const handleDeleteClick = (employeeId: string) => {
+    setDeleteEmployeeId(employeeId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteEmployeeId) return;
+    
+    try {
+      await deleteEmployee.mutateAsync(deleteEmployeeId);
+      toast.success('Employee deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setDeleteEmployeeId(null);
+    } catch (error: any) {
+      console.error('Failed to delete employee:', error);
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to delete employee';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteEmployeeId(null);
   };
 
   if (employeesError) {
@@ -122,12 +182,12 @@ export default function StaffPage() {
         </div>
         <PermissionGate permission={Permissions.STAFF_CREATE}>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger>
+            <DialogTrigger render={
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Employee
               </Button>
-            </DialogTrigger>
+            } />
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
@@ -258,21 +318,24 @@ export default function StaffPage() {
             </Card>
           ))
         ) : (
-          departments.map((dept: any) => (
-            <motion.div key={dept.id} variants={itemVariants}>
-              <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">{dept.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{dept.employee_count || 0}</div>
-                    <p className="text-xs text-muted-foreground">employees</p>
-                  </CardContent>
-                </Card>
+          departments.map((dept: any) => {
+            const deptEmployeeCount = employees.filter((emp: any) => emp.department_id === dept.id).length;
+            return (
+              <motion.div key={dept.id} variants={itemVariants}>
+                <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">{dept.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{deptEmployeeCount}</div>
+                      <p className="text-xs text-muted-foreground">employees</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          ))
+            );
+          })
         )}
       </motion.div>
 
@@ -315,56 +378,110 @@ export default function StaffPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                employees.map((employee: any) => (
-                  <motion.tr
-                    key={employee.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
-                    className="border-b transition-colors"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                            {employee.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{employee.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{employee.email}</p>
+                employees.map((employee: any) => {
+                  const user = usersById.get(employee.user_id);
+                  const department = employee.department_id ? departmentsById.get(employee.department_id) : null;
+                  const fullName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Unknown';
+                  const initials = fullName !== 'Unknown' ? fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'U';
+                  
+                  return (
+                    <motion.tr
+                      key={employee.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+                      className="border-b transition-colors"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{fullName}</p>
+                            <p className="text-sm text-muted-foreground">{user?.email || 'No email'}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{employee.employee_code}</TableCell>
-                    <TableCell>{employee.department?.name || 'N/A'}</TableCell>
-                    <TableCell>{employee.job_title}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={employee.status === 'active' ? 'default' : 'secondary'}
-                        className={
-                          employee.status === 'on_leave'
-                            ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
-                            : employee.status === 'probation'
-                            ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
-                            : ''
-                        }
-                      >
-                        {employee.status?.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))
+                      </TableCell>
+                      <TableCell>{employee.employee_id || employee.employee_code || 'N/A'}</TableCell>
+                      <TableCell>{department?.name || 'N/A'}</TableCell>
+                      <TableCell>{employee.job_title}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={employee.status === 'active' ? 'default' : 'secondary'}
+                          className={
+                            employee.status === 'on_leave'
+                              ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
+                              : employee.status === 'probation'
+                              ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                              : ''
+                          }
+                        >
+                          {employee.status?.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => window.location.href = `/staff/${employee.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <PermissionGate permission={Permissions.STAFF_UPDATE}>
+                              <DropdownMenuItem onClick={() => window.location.href = `/staff/${employee.id}?edit=true`}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            </PermissionGate>
+                            <PermissionGate permission={Permissions.STAFF_DELETE}>
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDeleteClick(employee.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </PermissionGate>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </motion.tr>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the employee record.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteEmployee.isPending}
+            >
+              {deleteEmployee.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

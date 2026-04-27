@@ -119,12 +119,12 @@ export default function ProjectsPage() {
           </Button>
           <PermissionGate permission={Permissions.PROJECT_CREATE}>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger>
+              <DialogTrigger render={
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   New Project
                 </Button>
-              </DialogTrigger>
+              } />
               <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Create New Project</DialogTitle>

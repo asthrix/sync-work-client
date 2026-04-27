@@ -84,8 +84,14 @@ class WebSocketManager {
       };
 
       this.ws.onerror = (error) => {
-        console.error('[WebSocket] Error:', error);
-        this.emit('connection_status', { status: 'error' });
+        // WebSocket error event doesn't provide useful details
+        // It's usually a connection failure (server down, wrong URL, network issue)
+        if (this.ws?.readyState === WebSocket.CONNECTING) {
+          console.warn('[WebSocket] Connection failed - server may be unavailable');
+        } else {
+          console.warn('[WebSocket] Connection error occurred');
+        }
+        this.emit('connection_status', { status: 'error', message: 'Connection failed' });
       };
     } catch (error) {
       console.error('[WebSocket] Failed to create:', error);

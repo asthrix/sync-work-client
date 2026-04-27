@@ -76,12 +76,15 @@ export const staffService = {
     }
     
     // Step 2: Create employee record
+    // Convert date to ISO 8601 format (backend expects full ISO datetime)
+    const hireDateIso = data.hire_date ? new Date(data.hire_date).toISOString() : new Date().toISOString();
+    
     try {
       const employeePayload = {
         user_id: userId,
         employee_code: data.employee_code,
         employment_type: data.employment_type,
-        hire_date: data.hire_date,
+        hire_date: hireDateIso,
         job_title: data.job_title,
         department_id: data.department_id,
         salary: data.salary,
