@@ -188,12 +188,13 @@ export interface Milestone {
 export interface Client {
   id: string;
   name: string;
+  company: string;
   industry?: string;
-  email?: string;
-  phone?: string;
+  email: string;
+  phone: string;
   website?: string;
   address?: string;
-  tax_id?: string;
+  tax_id: string;
   status: 'active' | 'inactive' | 'prospect';
   account_manager_id?: string;
   notes?: string;
@@ -329,9 +330,8 @@ export interface Recognition {
 
 export interface Trip {
   id: string;
-  title: string;
-  description?: string;
   destination: string;
+  description?: string;
   start_date: string;
   end_date: string;
   organizer_id: string;

@@ -126,28 +126,47 @@ export default function ClientsPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Client Name</Label>
+              <Label htmlFor="name">Client Name *</Label>
               <Input id="name" {...register('name')} placeholder="Acme Corp" />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="company">Company Name *</Label>
+              <Input id="company" {...register('company')} placeholder="Acme Corporation Inc." />
+              {errors.company && (
+                <p className="text-sm text-destructive">{errors.company.message}</p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input id="email" type="email" {...register('email')} placeholder="contact@acme.com" />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone *</Label>
+                <Input id="phone" {...register('phone')} placeholder="+1 (555) 000-0000" />
+                {errors.phone && (
+                  <p className="text-sm text-destructive">{errors.phone.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tax_id">Tax ID *</Label>
+                <Input id="tax_id" {...register('tax_id')} placeholder="TAX123456" />
+                {errors.tax_id && (
+                  <p className="text-sm text-destructive">{errors.tax_id.message}</p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>
                 <Input id="industry" {...register('industry')} placeholder="Technology" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" {...register('phone')} placeholder="+1 (555) 000-0000" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} placeholder="contact@acme.com" />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
             </div>
             <Button type="submit" className="w-full" disabled={createClient.isPending}>
               {createClient.isPending ? 'Creating...' : 'Add Client'}

@@ -16,7 +16,11 @@ export const staffKeys = {
 export function useEmployees(filters?: { page?: number; limit?: number; search?: string; department?: string; status?: string }) {
   return useQuery({
     queryKey: staffKeys.list(filters || {}),
-    queryFn: () => staffService.getEmployees(filters),
+    queryFn: async () => {
+      const response = await staffService.getEmployees(filters);
+      console.log('Staff API response:', response);
+      return response;
+    },
   });
 }
 
@@ -124,7 +128,8 @@ export function useCreateLeave() {
 export function useApproveLeave() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: staffService.approveLeave,
+    mutationFn: ({ id, approvedBy }: { id: string; approvedBy: string }) => 
+      staffService.approveLeave(id, approvedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffKeys.leaves() });
     },
@@ -134,8 +139,8 @@ export function useApproveLeave() {
 export function useRejectLeave() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => 
-      staffService.rejectLeave(id, reason),
+    mutationFn: ({ id, rejectionReason }: { id: string; rejectionReason: string }) => 
+      staffService.rejectLeave(id, rejectionReason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffKeys.leaves() });
     },

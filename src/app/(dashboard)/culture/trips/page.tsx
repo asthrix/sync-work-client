@@ -94,7 +94,7 @@ export default function TripsPage() {
             <Card key={trip.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{trip.title}</CardTitle>
+                  <CardTitle className="text-lg">{trip.destination}</CardTitle>
                   <Badge className={statusVariants[trip.status] || 'bg-gray-500/10 text-gray-500'}>
                     {trip.status}
                   </Badge>

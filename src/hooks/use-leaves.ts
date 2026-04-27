@@ -37,7 +37,8 @@ export function useCreateLeave() {
 export function useApproveLeave() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: leavesService.approveLeave,
+    mutationFn: ({ id, approvedBy }: { id: string; approvedBy: string }) =>
+      leavesService.approveLeave(id, approvedBy),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leavesKeys.all });
     },
@@ -47,8 +48,8 @@ export function useApproveLeave() {
 export function useRejectLeave() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      leavesService.rejectLeave(id, reason),
+    mutationFn: ({ id, rejectionReason }: { id: string; rejectionReason: string }) =>
+      leavesService.rejectLeave(id, rejectionReason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leavesKeys.all });
     },

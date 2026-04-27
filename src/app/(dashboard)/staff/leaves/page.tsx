@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import { useLeaves, useApproveLeave, useRejectLeave, useLeaveBalance } from '@/hooks/use-leaves';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -29,19 +30,24 @@ export default function LeavesPage() {
   const { data: balanceData } = useLeaveBalance();
   const approveLeave = useApproveLeave();
   const rejectLeave = useRejectLeave();
+  const currentUser = useAuthStore((state) => state.user);
 
   const leaves = leavesData?.data || [];
   const balance = balanceData?.data || {};
 
   const handleApprove = (id: string) => {
-    approveLeave.mutate(id, {
+    if (!currentUser?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    approveLeave.mutate({ id, approvedBy: currentUser.id }, {
       onSuccess: () => toast.success('Leave approved'),
       onError: () => toast.error('Failed to approve leave'),
     });
   };
 
   const handleReject = (id: string) => {
-    rejectLeave.mutate({ id, reason: 'Rejected by manager' }, {
+    rejectLeave.mutate({ id, rejectionReason: 'Rejected by manager' }, {
       onSuccess: () => toast.success('Leave rejected'),
       onError: () => toast.error('Failed to reject leave'),
     });

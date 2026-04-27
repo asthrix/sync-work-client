@@ -22,6 +22,7 @@ import { staggerContainer, itemVariants } from '@/lib/animations/variants';
 import { PermissionGate } from '@/components/rbac/permission-gate';
 import { Permissions } from '@/lib/rbac/permissions';
 import { useProjects, useCreateProject } from '@/hooks/use-projects';
+import { useUsers } from '@/hooks/use-users';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -57,9 +58,11 @@ const priorityColors: Record<string, string> = {
 export default function ProjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: projectsData, isLoading, error } = useProjects();
+  const { data: usersData } = useUsers({ limit: 100 });
   const createProject = useCreateProject();
   
   const projects = projectsData?.data || [];
+  const users = usersData?.data || [];
 
   const {
     register,
@@ -129,7 +132,7 @@ export default function ProjectsPage() {
               </DialogHeader>
               <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Project Name</Label>
+                  <Label htmlFor="name">Project Name *</Label>
                   <Input id="name" {...register('name')} placeholder="Enter project name" />
                   {errors.name && (
                     <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -139,9 +142,23 @@ export default function ProjectsPage() {
                   <Label htmlFor="description">Description</Label>
                   <textarea id="description" {...register('description')} className="w-full rounded-md border border-input bg-background px-3 py-2" rows={3} placeholder="Project description" />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manager_id">Manager *</Label>
+                  <select id="manager_id" {...register('manager_id')} className="w-full rounded-md border border-input bg-background px-3 py-2">
+                    <option value="">Select a manager</option>
+                    {users.map((user: any) => (
+                      <option key={user.id} value={user.id}>
+                        {user.full_name || `${user.first_name} ${user.last_name}`}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.manager_id && (
+                    <p className="text-sm text-destructive">{errors.manager_id.message}</p>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="priority">Priority</Label>
+                    <Label htmlFor="priority">Priority *</Label>
                     <select id="priority" {...register('priority')} className="w-full rounded-md border border-input bg-background px-3 py-2">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -153,10 +170,10 @@ export default function ProjectsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="due_date">Due Date</Label>
-                    <input id="due_date" type="date" {...register('due_date')} className="w-full rounded-md border border-input bg-background px-3 py-2" />
-                    {errors.due_date && (
-                      <p className="text-sm text-destructive">{errors.due_date.message}</p>
+                    <Label htmlFor="end_date">Due Date *</Label>
+                    <input id="end_date" type="date" {...register('end_date')} className="w-full rounded-md border border-input bg-background px-3 py-2" />
+                    {errors.end_date && (
+                      <p className="text-sm text-destructive">{errors.end_date.message}</p>
                     )}
                   </div>
                 </div>

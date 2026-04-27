@@ -18,13 +18,13 @@ export const leavesService = {
     return response.data;
   },
 
-  approveLeave: async (id: string) => {
-    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/approve`);
+  approveLeave: async (id: string, approvedBy: string) => {
+    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/approve`, { approved_by: approvedBy });
     return response.data;
   },
 
-  rejectLeave: async (id: string, reason?: string) => {
-    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/reject`, { reason });
+  rejectLeave: async (id: string, rejectionReason: string) => {
+    const response = await api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/reject`, { rejection_reason: rejectionReason });
     return response.data;
   },
 

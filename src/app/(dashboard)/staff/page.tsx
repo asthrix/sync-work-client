@@ -82,12 +82,16 @@ export default function StaffPage() {
 
   const onSubmit = async (data: EmployeeFormData) => {
     try {
-      await createEmployee.mutateAsync(data as any);
+      console.log('Creating employee with data:', data);
+      const result = await createEmployee.mutateAsync(data as any);
+      console.log('Employee created successfully:', result);
       toast.success('Employee created successfully');
       reset();
       setIsDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to create employee');
+      console.error('Failed to create employee:', error);
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to create employee';
+      toast.error(errorMessage);
     }
   };
 
